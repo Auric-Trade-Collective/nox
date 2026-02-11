@@ -1,17 +1,34 @@
 package webserver
 
 import (
-	"YendisFish/nox/js"
+	"net/http"
+	"path/filepath"
 )
 
 type Webserver struct {
-	runtime *js.Js
+	server *http.Server
 }
 
-func NewWebserver(conf *js.Config) *Webserver {
-	return new(Webserver)
+func NewWebserver(addr string) *Webserver {
+	abs, err := filepath.Abs("./") //later should be read from config
+	if err != nil {
+		panic(err.Error())
+	}
+
+	hand := &NoxHandler{ Root: abs, DirView: nil }
+	server := &Webserver{
+		server: &http.Server{
+			Addr: addr,
+			Handler: hand,
+		},
+	}
+
+	return server
 }
 
-func (ws *Webserver) Start() {
-
+func (s *Webserver) Serve() {
+	err := s.server.ListenAndServe()
+	if err != nil {
+		panic(err.Error())
+	}
 }

@@ -4,8 +4,7 @@ import (
 	// "net/http"
 	// "net/http/httputil"
 
-	"YendisFish/nox/js"
-	"fmt"
+	"YendisFish/nox/webserver"
 
 	"github.com/alecthomas/kong"
 )
@@ -20,13 +19,8 @@ func main() {
 	ctx := kong.Parse(&CLI)
 	switch ctx.Command() {
 	case "test":
-		jsc := js.CreateRuntime()
-		_, err := jsc.Runtime.RunString("createNox({ root: \"test\", ip: \"\", port: \"100\" });")
-		if err != nil {
-			panic(err.Error())
-		}
-
-		fmt.Println(jsc.Config.Root)
+		serv := webserver.NewWebserver(":5432")
+		serv.Serve()
 	}
 }
 
