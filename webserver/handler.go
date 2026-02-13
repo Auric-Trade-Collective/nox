@@ -26,7 +26,7 @@ func (h *NoxHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if reqInfo.IsDir() {
-		h.handleDirReq(w, req, reqInfo, sanitized)
+		h.handleDirReq(w, req, sanitized)
 		return
 	}
 	
@@ -37,13 +37,21 @@ func (h *NoxHandler) handleLogicReq(w http.ResponseWriter, req *http.Request) {
 	//check for existing API endpoints, or anything else, call them and return output
 }
 
-func (h *NoxHandler) handleDirReq(w http.ResponseWriter, req *http.Request, inf os.FileInfo, path string) {
-	//does the dir have an index.html? If so, return that!
-
-	if h.DirView == nil {
-		http.ServeFile(w, req, path)
+func (h *NoxHandler) handleDirReq(w http.ResponseWriter, req *http.Request, path string) {
+	indexPath := filepath.Join(path, "index.html")
+	_, indexErr := os.Stat(indexPath)
+	if indexErr == nil {
+		http.ServeFile(w, req, indexPath)
+		return
+	} else if !os.IsNotExist(indexErr) {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 
-	//return an HTML view of the directory
-	//h.DirView should be a callback given which generates a directory view
+	if h.DirView != nil {
+		//generate dir view
+		return
+	}
+
+	http.ServeFile(w, req, path)
 }
