@@ -11,7 +11,7 @@ typedef struct {
 } DllManager;
 
 
-DllManager *LoadDll(char *libname) {
+static inline DllManager *LoadDll(char *libname) {
     void *handle = dlopen(libname, RTLD_NOW);
     if(handle == NULL) {
         return NULL;
@@ -22,7 +22,7 @@ DllManager *LoadDll(char *libname) {
     return dll;
 }
 
-void CloseDll(DllManager *dll) {
+static inline void CloseDll(DllManager *dll) {
     dlclose(dll->lib_handle);
     free(dll);
 }

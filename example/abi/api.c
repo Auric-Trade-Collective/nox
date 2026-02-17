@@ -2,10 +2,10 @@
 #include <stdio.h>
 
 void DoSomething(HttpResponse *resp, HttpRequest *req) {
-    printf("Hi!");
+    WriteStream(resp, "Hi!", 3);
 }
 
 void CreateNoxApi(NoxEndpointCollection *coll, createEndpoint endp) {
     printf("Loading Nox API \n");
-    endp(coll, "/foo", DoSomething);
+    endp(coll, "foo", DoSomething);
 }

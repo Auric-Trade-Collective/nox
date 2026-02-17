@@ -1,6 +1,7 @@
 #ifndef WEBAPI_H
 #define WEBAPI_H
 
+#include <stdint.h>
 #include <string.h>
 #include <dlfcn.h>
 #include <stdlib.h>
@@ -12,7 +13,7 @@ typedef struct {
 } HttpRequest;
 
 typedef struct {
-
+    uintptr_t gohandle;
 } HttpResponse;
 
 typedef void (*apiCallback)(HttpResponse *, HttpRequest *);
@@ -32,7 +33,42 @@ typedef struct {
 typedef void (*createEndpoint)(NoxEndpointCollection*, char*, apiCallback);
 typedef void (*createNox)(NoxEndpointCollection*, createEndpoint);
 
-void CreateNoxEndpoint(NoxEndpointCollection *coll, char *endpoint, apiCallback callback); 
+static inline char * SanitizePath(char *buff) {
+    if(buff == NULL) {
+        return NULL;
+    }
+
+    int len = 0;
+    for(; buff[len] != '\0'; len++);
+    len++;
+
+    if(buff[0] != '/') {
+        char *newBuff = (char *)malloc(sizeof(char) * (len + 1));
+        newBuff[0] = '/';
+        for(int i = 1; i < len + 1; i++) {
+            newBuff[i] = buff[i - 1];
+        }
+
+        free(buff);
+        return newBuff;
+    }
+
+    return buff;
+}
+
+static inline void CreateNoxEndpoint(NoxEndpointCollection *coll, char *endpoint, apiCallback callback) {
+    char *sEndp = SanitizePath(strdup(endpoint));
+    NoxEndpoint endp = { .endpoint = sEndp, .callback = callback };
+
+    
+    NoxEndpoint *ep = (NoxEndpoint *)malloc(sizeof(NoxEndpoint) * (coll->endpointCount + 1));
+    memcpy(ep, coll->endpoints, sizeof(NoxEndpoint) * coll->endpointCount);
+    ep[coll->endpointCount] = endp;
+
+    free(coll->endpoints);
+    coll->endpoints = ep;
+    coll->endpointCount++;
+}
 
 static inline NoxEndpointCollection *LoadApi(char *location) {
     DllManager *dll = LoadDll(location);
@@ -57,19 +93,8 @@ static inline NoxEndpointCollection *LoadApi(char *location) {
     return coll;
 }
 
-void CreateNoxEndpoint(NoxEndpointCollection *coll, char *endpoint, apiCallback callback) {
-    NoxEndpoint endp = { .endpoint = strdup(endpoint), .callback = callback };
-    
-    NoxEndpoint *ep = (NoxEndpoint *)malloc(sizeof(NoxEndpoint) * (coll->endpointCount + 1));
-    memcpy(ep, coll->endpoints, sizeof(NoxEndpoint) * coll->endpointCount);
-    ep[coll->endpointCount] = endp;
 
-    free(coll->endpoints);
-    coll->endpoints = ep;
-    coll->endpointCount++;
-}
-
-void CloseApi(NoxEndpointCollection *coll) {
+static inline void CloseApi(NoxEndpointCollection *coll) {
     if(coll == NULL) return;
 
     if(coll->dll) {
@@ -86,8 +111,10 @@ void CloseApi(NoxEndpointCollection *coll) {
     free(coll);
 }
 
-void InvokeApiCallback(apiCallback cb, HttpResponse *resp, HttpRequest *req) {
+static inline void InvokeApiCallback(apiCallback cb, HttpResponse *resp, HttpRequest *req) {
     cb(resp, req);
 }
+
+void WriteStream(HttpResponse *resp, char *buff, int len);
 
 #endif

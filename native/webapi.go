@@ -3,16 +3,35 @@ package native
 /*
 #cgo LDFLAGS: -ldl
 #include "webapi.h"
+#include <stdint.h>
 */
 import "C"
 import (
 	"fmt"
+	"net/http"
+	"runtime/cgo"
 	"unsafe"
 )
 
+//c exports
+
+//export WriteStream
+func WriteStream(w *C.HttpResponse, dat *C.char, length C.int) {
+	gohandle := cgo.Handle(w.gohandle)
+	wrt, ok := gohandle.Value().(http.ResponseWriter)
+	if !ok {
+		fmt.Println("Could not write to stream!")
+		return
+	}
+
+	buff := C.GoBytes(unsafe.Pointer(dat), length)
+	wrt.Write(buff)
+}
+
 type NoxApi struct {
 	handle *C.NoxEndpointCollection
-	Endpoints map[string][0]byte
+	Endpoints map[string]unsafe.Pointer
+	Auth unsafe.Pointer //eventually there will be an option to load and use an auth function
 
 	//may put more in here in order to store API information and stuff
 }
@@ -29,16 +48,28 @@ func CreateApi(libpath string) (*NoxApi, error) {
 
 	nox := &NoxApi{
 		handle: endp,
-		Endpoints: make(map[string][0]byte),
+		Endpoints: make(map[string]unsafe.Pointer),
 	}
 
 	endps := getNoxEndpointSlice(endp)
 
 	for _, ep := range endps {
-		nox.Endpoints[C.GoString(ep.endpoint)] = *ep.callback
+		nox.Endpoints[C.GoString(ep.endpoint)] = unsafe.Pointer(ep.callback)
 	}
 
 	return nox, nil;
+}
+
+func (api *NoxApi) ExecuteEndpoint(path string, resp http.ResponseWriter, req *http.Request) {
+	goHandle := cgo.NewHandle(resp)
+	ptr := C.uintptr_t(goHandle)
+
+	cResp := &C.HttpResponse{
+		gohandle: ptr,
+	}
+	cReq := &C.HttpRequest{}
+
+	C.InvokeApiCallback((*[0]byte)(api.Endpoints[path]), cResp, cReq)
 }
 
 func (api *NoxApi) CloseApi() {

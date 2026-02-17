@@ -1,6 +1,7 @@
 package webserver
 
 import (
+	"YendisFish/nox/native"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -8,6 +9,7 @@ import (
 
 type NoxHandler struct {
 	Root string
+	Api *native.NoxApi
 	//eventually map the endpoints to some ABI functions
 	DirView interface{}
 }
@@ -35,6 +37,9 @@ func (h *NoxHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 func (h *NoxHandler) handleLogicReq(w http.ResponseWriter, req *http.Request) {
 	//check for existing API endpoints, or anything else, call them and return output
+	if _, ok := h.Api.Endpoints[req.URL.Path]; ok {
+		h.Api.ExecuteEndpoint(req.URL.Path, w, req)
+	}
 }
 
 func (h *NoxHandler) handleDirReq(w http.ResponseWriter, req *http.Request, path string) {

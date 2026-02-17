@@ -30,10 +30,14 @@ func main() {
 			fmt.Println("Foo registered!")	
 		}
 
+		serve := webserver.NewWebserver(":5432", api)
+		
+		serve.Serve()
+
 		api.CloseApi()
 	case "test":
-		serv := webserver.NewWebserver(":5432")
-		serv.Serve()
+		// serv := webserver.NewWebserver(":5432")
+		// serv.Serve()
 	}
 }
 
