@@ -1,19 +1,11 @@
-typedef struct {
+#include "../../native/webapi.h"
+#include <stdio.h>
 
-} HtmlRequest;
-
-typedef struct {
-
-} HtmlResponse;
-
-typedef void (*funcHandler)(HtmlResponse*, HtmlRequest*);
-typedef void (*registerFunc)(char *, funcHandler);
-
-void TestEndpoint(HtmlResponse *resp, HtmlRequest *req) {
-
+void DoSomething(HttpResponse *resp, HttpRequest *req) {
+    printf("Hi!");
 }
 
-void createNox(registerFunc reg) {
-    reg("/test", TestEndpoint);
+void CreateNoxApi(NoxEndpointCollection *coll, createEndpoint endp) {
+    printf("Loading Nox API \n");
+    endp(coll, "/foo", DoSomething);
 }
-

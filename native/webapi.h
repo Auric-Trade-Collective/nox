@@ -4,6 +4,7 @@
 #include <string.h>
 #include <dlfcn.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "dlls.h"
 
 typedef struct {
@@ -29,11 +30,11 @@ typedef struct {
 } NoxEndpointCollection;
 
 typedef void (*createEndpoint)(NoxEndpointCollection*, char*, apiCallback);
-typedef NoxEndpoint *(*createNox)(NoxEndpointCollection*, createEndpoint);
+typedef void (*createNox)(NoxEndpointCollection*, createEndpoint);
 
 void CreateNoxEndpoint(NoxEndpointCollection *coll, char *endpoint, apiCallback callback); 
 
-NoxEndpointCollection *LoadApi(char *location) {
+static inline NoxEndpointCollection *LoadApi(char *location) {
     DllManager *dll = LoadDll(location);
     if(dll == NULL) {
         return NULL;
@@ -45,7 +46,13 @@ NoxEndpointCollection *LoadApi(char *location) {
     coll->endpoints = NULL;
 
     createNox create = (createNox)dlsym(dll->lib_handle, "CreateNoxApi");
-    NoxEndpoint *buf = create(coll, CreateNoxEndpoint);
+
+    if(create == NULL) {
+        printf("Failed to create nox\n");
+        return NULL;
+    }
+
+    create(coll, CreateNoxEndpoint);
 
     return coll;
 }
