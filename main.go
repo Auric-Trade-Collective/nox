@@ -26,8 +26,8 @@ func main() {
 	case "dll":
 		api, _ := native.CreateApi(CLI.Dll.Dir)
 		
-		if _, ok := api.Endpoints["/foo"]; ok {
-			fmt.Println("Foo registered!")	
+		for k, _ := range api.Endpoints {
+			fmt.Println("Registered: " + k)
 		}
 
 		serve := webserver.NewWebserver(":5432", api)
