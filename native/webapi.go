@@ -12,8 +12,17 @@ import (
 	"runtime/cgo"
 	"unsafe"
 )
-
 //c exports
+
+//export WriteCopy
+func WriteCopy(w *C.HttpResponse, dat *C.NoxData) {
+
+}
+
+//export WriteMove
+func WriteMove(w *C.HttpResponse, dat *C.NoxData) {
+	//IT IS VITAL THAT THIS FUNCTION CLEANS UP THE dat POINTER AFTER ITSELF!!!!!
+}
 
 //export WriteText
 func WriteText(w *C.HttpResponse, dat *C.char, length C.int) {
@@ -26,6 +35,11 @@ func WriteText(w *C.HttpResponse, dat *C.char, length C.int) {
 
 	buff := C.GoBytes(unsafe.Pointer(dat), length)
 	wrt.Write(buff)
+}
+
+//export WriteJson
+func WriteJson(w *C.HttpResponse, dat *C.char, length C.int) {
+
 }
 
 type NoxApi struct {
@@ -63,6 +77,7 @@ func CreateApi(libpath string) (*NoxApi, error) {
 func (api *NoxApi) ExecuteEndpoint(path string, resp http.ResponseWriter, req *http.Request) {
 	goHandle := cgo.NewHandle(resp)
 	ptr := C.uintptr_t(goHandle)
+	defer goHandle.Delete()
 
 	cResp := &C.HttpResponse{
 		gohandle: ptr,
