@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <dlfcn.h>
+#include <dlfcn.h> 
 #include <stdlib.h>
 #include <stdio.h>
 #include "dlls.h"
@@ -115,6 +115,40 @@ static inline void InvokeApiCallback(apiCallback cb, HttpResponse *resp, HttpReq
     cb(resp, req);
 }
 
-void WriteStream(HttpResponse *resp, char *buff, int len);
+//Here is where the JSON and Stream helpers will exist
+//This includes exported function defs, some types, and C logic
+
+typedef enum {
+    PLAINTEXT = 0,
+    JSON = 1,
+    STREAM = 2,
+    STREAMFILE = 3, //whilst you can use BYTES/STREAM to stream a file, this will tell
+                    //nox what file you want to send, and nox will handle the reading,
+                    //writing, parsing, and data types for you
+    BYTES= 4,
+} NoxDataType;
+
+typedef enum {
+    BEGIN = 1,
+    PART = 2,
+    END = 3,
+} NoxStreamSection;
+
+typedef struct {
+    NoxDataType type;
+    uint8_t *buff; //Does not have to be a Cstring
+    size_t length;
+    char *filename; // CSTRING, can be NULL
+    NoxStreamSection section;
+} NoxData;
+
+//Copies the pointer given
+void WriteCopy(HttpResponse *resp, NoxData *dat);
+//The pointer given should not be freed by the programmer, but is freed by nox, no copy streaming!
+__attribute__((warning("WriteMove: This function takes ownership of all pointer and buffer parameters! Please do not free them!")))
+void WriteMove(HttpResponse *resp, NoxData *dat);
+
+void WriteText(HttpResponse *resp, char *buff, int len);
+void WriteJson(HttpResponse *resp, char *buff, int len);
 
 #endif

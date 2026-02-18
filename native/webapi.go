@@ -15,8 +15,8 @@ import (
 
 //c exports
 
-//export WriteStream
-func WriteStream(w *C.HttpResponse, dat *C.char, length C.int) {
+//export WriteText
+func WriteText(w *C.HttpResponse, dat *C.char, length C.int) {
 	gohandle := cgo.Handle(w.gohandle)
 	wrt, ok := gohandle.Value().(http.ResponseWriter)
 	if !ok {
