@@ -12,16 +12,54 @@ import (
 	"runtime/cgo"
 	"unsafe"
 )
+
 //c exports
+
+//export WriteFile
+func WriteFile(w *C.HttpResponse, dat *C.NoxData) {
+	gohandle := cgo.Handle(w.gohandle)
+	wrt, ok := gohandle.Value().(http.ResponseWriter)
+	if !ok {
+		fmt.Println("Could not write to stream!")
+		return
+	}
+
+	filename := C.GoString(dat.filename)
+	_ = filename //eventually open filestream, and return the data
+}
 
 //export WriteCopy
 func WriteCopy(w *C.HttpResponse, dat *C.NoxData) {
+	gohandle := cgo.Handle(w.gohandle)
+	wrt, ok := gohandle.Value().(http.ResponseWriter)
+	if !ok {
+		fmt.Println("Could not write to stream!")
+		return
+	}
 
+	buff := unsafe.Slice((*byte)(dat.buff), dat.length)
+	
+	toWrite := make([]byte, dat.length)
+	copy(toWrite, buff)
+
+	wrt.Write(buff)
 }
 
 //export WriteMove
 func WriteMove(w *C.HttpResponse, dat *C.NoxData) {
+	gohandle := cgo.Handle(w.gohandle)
+	wrt, ok := gohandle.Value().(http.ResponseWriter)
+	if !ok {
+		fmt.Println("Could not write to stream!")
+		return
+	}
+
 	//IT IS VITAL THAT THIS FUNCTION CLEANS UP THE dat POINTER AFTER ITSELF!!!!!
+	// right now it just copies over the buffer, should eventually do more than that
+	buff := unsafe.Slice((*byte)(dat.buff), dat.length)
+	wrt.Write(buff)
+
+	C.FreeData(dat);
 }
 
 //export WriteText
@@ -35,11 +73,6 @@ func WriteText(w *C.HttpResponse, dat *C.char, length C.int) {
 
 	buff := C.GoBytes(unsafe.Pointer(dat), length)
 	wrt.Write(buff)
-}
-
-//export WriteJson
-func WriteJson(w *C.HttpResponse, dat *C.char, length C.int) {
-
 }
 
 type NoxApi struct {

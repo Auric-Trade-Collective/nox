@@ -120,7 +120,6 @@ static inline void InvokeApiCallback(apiCallback cb, HttpResponse *resp, HttpReq
 
 typedef enum {
     PLAINTEXT = 0,
-    JSON = 1,
     STREAM = 2,
     STREAMFILE = 3, //whilst you can use BYTES/STREAM to stream a file, this will tell
                     //nox what file you want to send, and nox will handle the reading,
@@ -142,6 +141,48 @@ typedef struct {
     NoxStreamSection section;
 } NoxData;
 
+
+__attribute__((warning("NoxBuffer: Keep in mind the returned pointer will take ownership of the buffer passed")))
+static inline NoxData *NoxBuffer(uint8_t *buff, size_t len) {
+    NoxData *dat = (NoxData *)malloc(sizeof(NoxData));
+    dat->type = BYTES;
+    dat->buff = buff;
+    dat->length = len;
+    dat->filename = NULL;
+    dat->section = (NoxStreamSection)0;
+
+    return dat;
+}
+
+static inline NoxData *NoxText(char *buff, size_t len) {
+    NoxData *dat = (NoxData *)malloc(sizeof(NoxData));
+    dat->type = PLAINTEXT;
+    dat->buff = (uint8_t *)strdup(buff);
+    dat->length = len;
+    dat->filename = NULL;
+    dat->section = (NoxStreamSection)0;
+
+    return dat;
+}
+
+static inline NoxData *NoxFile(char *filename) {
+    NoxData *dat = (NoxData *)malloc(sizeof(NoxData));
+    dat->type = STREAMFILE;
+    dat->buff = NULL;
+    dat->length = -1;
+    dat->filename = strdup(filename); //Cstring, can be read without a len
+    dat->section = (NoxStreamSection)0;
+
+    return dat;
+}
+
+__attribute__((warning("FreeData: This will free any buffers you currently have inside your NoxData pointer")))
+static inline void FreeData(NoxData *dat) {
+    free(dat->buff);
+    free(dat->filename);
+    free(dat);
+}
+
 //Copies the pointer given
 void WriteCopy(HttpResponse *resp, NoxData *dat);
 //The pointer given should not be freed by the programmer, but is freed by nox, no copy streaming!
@@ -149,6 +190,5 @@ __attribute__((warning("WriteMove: This function takes ownership of all pointer 
 void WriteMove(HttpResponse *resp, NoxData *dat);
 
 void WriteText(HttpResponse *resp, char *buff, int len);
-void WriteJson(HttpResponse *resp, char *buff, int len);
 
 #endif
