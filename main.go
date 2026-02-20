@@ -55,7 +55,14 @@ func main() { ctx := kong.Parse(&CLI)
 		var conf webserver.Config
 		toml.Unmarshal(buff, &conf)
 
-		conf.Nox.Root = filepath.Join(dir, conf.Nox.Root)
+		cDir, err := os.Getwd()
+		if err != nil {
+			panic(err.Error())
+		}
+		
+		os.Chdir(dir)
+		conf.Nox.Root, _ = filepath.Abs(conf.Nox.Root)
+		os.Chdir(cDir)
 		
 		fmt.Println(conf.Nox.Root);
 
