@@ -36,6 +36,10 @@ func (h *NoxHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h *NoxHandler) handleLogicReq(w http.ResponseWriter, req *http.Request) {
+	if h.Api == nil {
+		return
+	}
+
 	//check for existing API endpoints, or anything else, call them and return output
 	if _, ok := h.Api.Endpoints[req.URL.Path]; ok {
 		h.Api.ExecuteEndpoint(req.URL.Path, w, req)

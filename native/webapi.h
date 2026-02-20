@@ -59,7 +59,6 @@ static inline char * SanitizePath(char *buff) {
 static inline void CreateNoxEndpoint(NoxEndpointCollection *coll, char *endpoint, apiCallback callback) {
     char *sEndp = SanitizePath(strdup(endpoint));
     NoxEndpoint endp = { .endpoint = sEndp, .callback = callback };
-
     
     NoxEndpoint *ep = (NoxEndpoint *)malloc(sizeof(NoxEndpoint) * (coll->endpointCount + 1));
     memcpy(ep, coll->endpoints, sizeof(NoxEndpoint) * coll->endpointCount);
@@ -190,5 +189,6 @@ __attribute__((warning("WriteMove: This function takes ownership of all pointer 
 void WriteMove(HttpResponse *resp, NoxData *dat);
 
 void WriteText(HttpResponse *resp, char *buff, int len);
+void WriteFile(HttpResponse *resp, NoxData *dat);
 
 #endif

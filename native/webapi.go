@@ -8,7 +8,9 @@ package native
 import "C"
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"runtime/cgo"
 	"unsafe"
 )
@@ -25,7 +27,26 @@ func WriteFile(w *C.HttpResponse, dat *C.NoxData) {
 	}
 
 	filename := C.GoString(dat.filename)
-	_ = filename //eventually open filestream, and return the data
+
+	f, fErr := os.Open(filename)
+	if fErr != nil {
+		fmt.Println(fErr.Error())
+	}
+	defer f.Close()
+
+	buff := make([]byte, 512)
+	_, err := f.Read(buff)
+	if err != nil && err != io.EOF {
+		fmt.Println(err.Error())
+	}
+
+	conType := http.DetectContentType(buff)
+
+	f.Seek(0, 0)
+
+	wrt.Header().Set("Content-Type", conType)
+	wrt.Header().Set("Content-Disposition", `attachment; filename="` + filename + `"`)
+	io.Copy(wrt, f)
 }
 
 //export WriteCopy

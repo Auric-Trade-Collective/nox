@@ -2,24 +2,19 @@ package webserver
 
 import (
 	"YendisFish/nox/native"
+	"fmt"
 	"net/http"
-	"path/filepath"
 )
 
 type Webserver struct {
 	server *http.Server
 }
 
-func NewWebserver(addr string, api *native.NoxApi) *Webserver {
-	abs, err := filepath.Abs("./") //later should be read from config
-	if err != nil {
-		panic(err.Error())
-	}
-
-	hand := &NoxHandler{ Root: abs, Api: api, DirView: nil }
+func NewWebserver(config *Config, api *native.NoxApi) *Webserver {
+	hand := &NoxHandler{ Root: config.Nox.Root, Api: api, DirView: nil }
 	server := &Webserver{
 		server: &http.Server{
-			Addr: addr,
+			Addr: config.Nox.Addr,
 			Handler: hand,
 		},
 	}
@@ -32,4 +27,8 @@ func (s *Webserver) Serve() {
 	if err != nil {
 		panic(err.Error())
 	}
+}
+
+func (s *Webserver) Display() {
+	fmt.Println(s.server.Addr)
 }

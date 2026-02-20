@@ -1,0 +1,17 @@
+[nox]
+addr = ":5432"
+root = "./web/"
+api = "./api/"
+
+[nox.tls]
+enabled = true
+cert_file = "/some/dir/file.crt"
+key_file = "/some/dir/file.key"
+# protocols = ["TLSv1.2", "TLSv1.3"] do I want this?
+ciphers = "N/A"
+
+# [build]
+# this will one day include information on how nox can build APIs
+
+[nox.dependencies]
+"postgres" = "https://noxrepository.com/creator/posgres"

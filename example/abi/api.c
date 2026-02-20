@@ -10,7 +10,7 @@ void DoSomething(HttpResponse *resp, HttpRequest *req) {
 }
 
 void DoSomething2(HttpResponse *resp, HttpRequest *req) {
-    WriteText(resp, "Bar", 3);
+    WriteText(resp, "Foo", 3);
 }
 
 void CreateNoxApi(NoxEndpointCollection *coll, createEndpoint endp) {
