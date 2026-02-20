@@ -4,6 +4,12 @@ robust and simple ways for you to make your webapps come to
 life, nox aims to live up to Nginx/Apache in a modern and 
 complete way.
 
+Features include:
+- Serving directories and files
+- Hosting APIs
+- Using TLS **(INCOMPLETE)**
+- Hosting quick and large scale web projects
+
 # How to Build
 Pull the current repository, and run ``go build``!
 
@@ -25,3 +31,6 @@ cert_file = "/some/dir/file.crt"
 key_file = "/some/dir/file.key"
 ciphers = "N/A"
 ```
+
+After this, you can run nox in the current directory, and it
+will read your config and run the server!
