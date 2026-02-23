@@ -5,8 +5,8 @@ api = "./api/"
 
 [nox.tls]
 enabled = true
-cert_file = "/some/dir/file.crt"
-key_file = "/some/dir/file.key"
+cert_file = "./cert.pem"
+key_file = "./key.pem"
 # protocols = ["TLSv1.2", "TLSv1.3"] do I want this?
 ciphers = "N/A"
 

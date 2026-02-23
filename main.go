@@ -59,9 +59,11 @@ func main() { ctx := kong.Parse(&CLI)
 		if err != nil {
 			panic(err.Error())
 		}
-		
+
 		os.Chdir(dir)
 		conf.Nox.Root, _ = filepath.Abs(conf.Nox.Root)
+		conf.Nox.Tls.CertFile, _ = filepath.Abs(conf.Nox.Tls.CertFile)
+		conf.Nox.Tls.KeyFile, _ = filepath.Abs(conf.Nox.Tls.KeyFile)
 		os.Chdir(cDir)
 		
 		fmt.Println(conf.Nox.Root);

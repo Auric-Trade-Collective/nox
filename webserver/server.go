@@ -8,6 +8,7 @@ import (
 
 type Webserver struct {
 	server *http.Server
+	config *Config
 }
 
 func NewWebserver(config *Config, api *native.NoxApi) *Webserver {
@@ -17,15 +18,25 @@ func NewWebserver(config *Config, api *native.NoxApi) *Webserver {
 			Addr: config.Nox.Addr,
 			Handler: hand,
 		},
+		config: config,
 	}
 
 	return server
 }
 
 func (s *Webserver) Serve() {
-	err := s.server.ListenAndServe()
-	if err != nil {
-		panic(err.Error())
+	if !s.config.Nox.Tls.Enabled {
+		err := s.server.ListenAndServe()
+		if err != nil {
+			panic(err.Error())
+		}
+	} else {
+		err := s.server.ListenAndServeTLS(s.config.Nox.Tls.CertFile, 
+		                                  s.config.Nox.Tls.KeyFile)
+		
+		if err != nil {
+			panic(err.Error())
+		}
 	}
 }
 
