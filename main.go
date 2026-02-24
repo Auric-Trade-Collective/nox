@@ -10,14 +10,25 @@ import (
 	toml "github.com/pelletier/go-toml/v2"
 )
 
+var Version = "0.3"
+
 var CLI struct {
+	Version kong.VersionFlag `help:"Print version and exit"`
+
 	Spin struct {
-		Dir string `cmd:"--dir" help:"Test load a DLL file"`
+		Dir string `help:"Test load a DLL file" default:"."`
 	} `cmd:"" help:"Spinup a nox server"`
 }
 
 func main() {
-	ctx := kong.Parse(&CLI)
+	ctx := kong.Parse(&CLI,
+		kong.Name("nox"),
+		kong.Description("Nox webserver -- Version: " + Version),
+		kong.Vars{
+			"version": Version,
+		},
+		kong.UsageOnError(),
+	)
 
 	switch ctx.Command() {
 	case "spin":
