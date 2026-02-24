@@ -12,8 +12,9 @@ typedef struct {
 
 
 static inline DllManager *LoadDll(char *libname) {
-    void *handle = dlopen(libname, RTLD_NOW);
+    void *handle = dlopen(libname, RTLD_NOW | RTLD_GLOBAL);
     if(handle == NULL) {
+        fprintf(stderr, "dlopen failed: %s\n", dlerror());
         return NULL;
     }
 

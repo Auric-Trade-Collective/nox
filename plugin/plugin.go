@@ -1,5 +1,6 @@
-package native
+package plugin
+
 
 type Plugin struct {
-	
+
 }

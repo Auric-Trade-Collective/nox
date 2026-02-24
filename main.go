@@ -11,35 +11,15 @@ import (
 )
 
 var CLI struct {
-	Test struct {
-
-	} `cmd:"" help:"Test"`
-	Dll struct {
-		Dir string `cmd:"--dir" help:"Test load a DLL file"`
-	} `cmd:"" help:"Load DLLS"`
 	Spin struct {
 		Dir string `cmd:"--dir" help:"Test load a DLL file"`
 	} `cmd:"" help:"Spinup a nox server"`
 }
 
-func main() { ctx := kong.Parse(&CLI)
-	switch ctx.Command() {
-	case "dll":
-		// api, _ := native.CreateApi(CLI.Dll.Dir)
-		// 
-		// for k, _ := range api.Endpoints {
-		// 	fmt.Println("Registered: " + k)
-		//
-		//
-		// serve := webserver.NewWebserver(":5432", api)
-		// 
-		// serve.Serve()
-		//
-		// api.CloseApi()
-	case "test":
-		// serv := webserver.NewWebserver(":5432")
-		// serv.Serve()
+func main() {
+	ctx := kong.Parse(&CLI)
 
+	switch ctx.Command() {
 	case "spin":
 		dir, err := filepath.Abs("./")
 		if err != nil {
@@ -62,26 +42,14 @@ func main() { ctx := kong.Parse(&CLI)
 
 		os.Chdir(dir)
 		conf.Nox.Root, _ = filepath.Abs(conf.Nox.Root)
+		conf.Nox.Api, _ = filepath.Abs(conf.Nox.Api)
 		conf.Nox.Tls.CertFile, _ = filepath.Abs(conf.Nox.Tls.CertFile)
 		conf.Nox.Tls.KeyFile, _ = filepath.Abs(conf.Nox.Tls.KeyFile)
 		os.Chdir(cDir)
 		
 		fmt.Println(conf.Nox.Root);
 
-		serve := webserver.NewWebserver(&conf, nil)
+		serve := webserver.NewWebserver(&conf)
 		serve.Serve()
 	}
 }
-
-	// httputil.NewSingleHostReverseProxy()
-	// 
-	// handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
- //        switch r.Host {
- //        case "y.example.com":
- //            proxyY.ServeHTTP(w, r)
- //        case "z.example.com":
- //            proxyZ.ServeHTTP(w, r)
- //        default:
- //            http.Error(w, "Not Authorized", http.StatusForbidden)
- //        }
- //    })

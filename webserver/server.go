@@ -11,7 +11,12 @@ type Webserver struct {
 	config *Config
 }
 
-func NewWebserver(config *Config, api *native.NoxApi) *Webserver {
+func NewWebserver(config *Config) *Webserver {
+	api, err := native.CreateApi(config.Nox.Api)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	hand := &NoxHandler{ Root: config.Nox.Root, Api: api, DirView: nil }
 	server := &Webserver{
 		server: &http.Server{

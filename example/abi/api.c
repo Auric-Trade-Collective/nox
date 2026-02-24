@@ -2,11 +2,11 @@
 #include <stdio.h>
 
 void DoSomething(HttpResponse *resp, HttpRequest *req) {
-    for(size_t i = 0; i < 1024 * 1024 * 1024; i++) {
-        WriteText(resp, "Foo", 3);
-    }
-
-    WriteText(resp, "\0", 1);
+    // if(X() == 5) {
+    //     WriteText(resp, "Hello", 5);
+    // } else {
+    //     WriteText(resp, "Bye", 3);
+    // }
 }
 
 void DoSomething2(HttpResponse *resp, HttpRequest *req) {

@@ -111,7 +111,7 @@ func CreateApi(libpath string) (*NoxApi, error) {
 	defer C.free(unsafe.Pointer(cstr))
 
 	if endp == nil {
-		panic("Lib does not exist!")
+		panic("Lib does not exist! " + libpath)
 	}	
 
 	nox := &NoxApi{
@@ -133,10 +133,15 @@ func (api *NoxApi) ExecuteEndpoint(path string, resp http.ResponseWriter, req *h
 	ptr := C.uintptr_t(goHandle)
 	defer goHandle.Delete()
 
+	pthStr := C.CString(path)
+	defer C.free(unsafe.Pointer(pthStr));
+
 	cResp := &C.HttpResponse{
 		gohandle: ptr,
 	}
-	cReq := &C.HttpRequest{}
+	cReq := &C.HttpRequest{
+		endpoint: pthStr,
+	}
 
 	C.InvokeApiCallback((*[0]byte)(api.Endpoints[path]), cResp, cReq)
 }

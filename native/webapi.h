@@ -9,7 +9,7 @@
 #include "dlls.h"
 
 typedef struct {
-
+    char *endpoint;
 } HttpRequest;
 
 typedef struct {

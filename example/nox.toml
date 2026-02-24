@@ -1,10 +1,11 @@
 [nox]
 addr = ":5432"
 root = "./web/"
-api = "./api/"
+# api = "./abi/libapi.so"
+api = "../../nox-go-test/libapi2.so"
 
 [nox.tls]
-enabled = true
+enabled = false
 cert_file = "./cert.pem"
 key_file = "./key.pem"
 # protocols = ["TLSv1.2", "TLSv1.3"] do I want this?
