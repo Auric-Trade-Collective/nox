@@ -45,7 +45,7 @@ func WriteFile(w *C.HttpResponse, dat *C.NoxData) {
 	f.Seek(0, 0)
 
 	wrt.Header().Set("Content-Type", conType)
-	wrt.Header().Set("Content-Disposition", `attachment; filename="` + filename + `"`)
+	wrt.Header().Set("Content-Disposition", `attachment; filename="`+filename+`"`)
 	io.Copy(wrt, f)
 }
 
@@ -59,7 +59,7 @@ func WriteCopy(w *C.HttpResponse, dat *C.NoxData) {
 	}
 
 	buff := unsafe.Slice((*byte)(dat.buff), dat.length)
-	
+
 	toWrite := make([]byte, dat.length)
 	copy(toWrite, buff)
 
@@ -80,7 +80,7 @@ func WriteMove(w *C.HttpResponse, dat *C.NoxData) {
 	buff := unsafe.Slice((*byte)(dat.buff), dat.length)
 	wrt.Write(buff)
 
-	C.FreeData(dat);
+	C.FreeData(dat)
 }
 
 //export WriteText
@@ -98,28 +98,28 @@ func WriteText(w *C.HttpResponse, dat *C.char, length C.int) {
 
 //export CreateGet
 func CreateGet(coll *C.NoxEndpointCollection, path *C.char, cb C.apiCallback) {
-	C.CreateNoxEndpoint(coll, path, cb, 0);
+	C.CreateNoxEndpoint(coll, path, cb, 0)
 }
 
 //export CreatePost
 func CreatePost(coll *C.NoxEndpointCollection, path *C.char, cb C.apiCallback) {
-	C.CreateNoxEndpoint(coll, path, cb, 1);
+	C.CreateNoxEndpoint(coll, path, cb, 1)
 }
 
 //export CreatePut
 func CreatePut(coll *C.NoxEndpointCollection, path *C.char, cb C.apiCallback) {
-	C.CreateNoxEndpoint(coll, path, cb, 2);
+	C.CreateNoxEndpoint(coll, path, cb, 2)
 }
 
 //export CreateDelete
 func CreateDelete(coll *C.NoxEndpointCollection, path *C.char, cb C.apiCallback) {
-	C.CreateNoxEndpoint(coll, path, cb, 3);
+	C.CreateNoxEndpoint(coll, path, cb, 3)
 }
 
 type NoxApi struct {
-	handle *C.NoxEndpointCollection
+	handle    *C.NoxEndpointCollection
 	Endpoints map[string]map[string]unsafe.Pointer
-	Auth unsafe.Pointer //eventually there will be an option to load and use an auth function
+	Auth      unsafe.Pointer //eventually there will be an option to load and use an auth function
 
 	//may put more in here in order to store API information and stuff
 }
@@ -132,10 +132,10 @@ func CreateApi(libpath string) (*NoxApi, error) {
 
 	if endp == nil {
 		panic("Lib does not exist! " + libpath)
-	}	
+	}
 
 	nox := &NoxApi{
-		handle: endp,
+		handle:    endp,
 		Endpoints: make(map[string]map[string]unsafe.Pointer),
 	}
 
@@ -144,10 +144,14 @@ func CreateApi(libpath string) (*NoxApi, error) {
 	for _, ep := range endps {
 		var method string
 		switch ep.method {
-		case 0: method = http.MethodGet
-		case 1: method = http.MethodPost
-		case 2: method = http.MethodPut
-		case 3: method = http.MethodDelete
+		case 0:
+			method = http.MethodGet
+		case 1:
+			method = http.MethodPost
+		case 2:
+			method = http.MethodPut
+		case 3:
+			method = http.MethodDelete
 		}
 
 		path := C.GoString(ep.endpoint)
@@ -159,7 +163,7 @@ func CreateApi(libpath string) (*NoxApi, error) {
 		end[method] = unsafe.Pointer(ep.callback)
 	}
 
-	return nox, nil;
+	return nox, nil
 }
 
 func (api *NoxApi) ExecuteEndpoint(path string, resp http.ResponseWriter, req *http.Request) {
@@ -168,7 +172,7 @@ func (api *NoxApi) ExecuteEndpoint(path string, resp http.ResponseWriter, req *h
 	defer goHandle.Delete()
 
 	pthStr := C.CString(path)
-	defer C.free(unsafe.Pointer(pthStr));
+	defer C.free(unsafe.Pointer(pthStr))
 
 	method := C.CString(req.Method)
 	defer C.free(unsafe.Pointer(method))
@@ -178,14 +182,14 @@ func (api *NoxApi) ExecuteEndpoint(path string, resp http.ResponseWriter, req *h
 	}
 	cReq := &C.HttpRequest{
 		endpoint: pthStr,
-		method: method,
+		method:   method,
 	}
 
 	C.InvokeApiCallback((*[0]byte)(api.Endpoints[path][req.Method]), cResp, cReq)
 }
 
 func (api *NoxApi) CloseApi() {
-	C.CloseApi(api.handle);
+	C.CloseApi(api.handle)
 }
 
 func getNoxEndpointSlice(endps *C.NoxEndpointCollection) []C.NoxEndpoint {
