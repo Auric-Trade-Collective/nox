@@ -21,6 +21,7 @@ typedef void (*apiCallback)(HttpResponse *, HttpRequest *);
 typedef struct {
     char *endpoint;
     apiCallback callback;
+    int method; //0 GET, 1 POST, 2 PUT, 3 DELETE
 } NoxEndpoint;
 
 
@@ -30,8 +31,8 @@ typedef struct {
     NoxEndpoint *endpoints;
 } NoxEndpointCollection;
 
-typedef void (*createEndpoint)(NoxEndpointCollection*, char*, apiCallback);
-typedef void (*createNox)(NoxEndpointCollection*, createEndpoint);
+typedef void (*createEndpoint)(NoxEndpointCollection*, char*, apiCallback, int);
+typedef void (*createNox)(NoxEndpointCollection*);
 
 static inline char * SanitizePath(char *buff) {
     if(buff == NULL) {
@@ -56,9 +57,9 @@ static inline char * SanitizePath(char *buff) {
     return buff;
 }
 
-static inline void CreateNoxEndpoint(NoxEndpointCollection *coll, char *endpoint, apiCallback callback) {
+static inline void CreateNoxEndpoint(NoxEndpointCollection *coll, char *endpoint, apiCallback callback, int method) {
     char *sEndp = SanitizePath(strdup(endpoint));
-    NoxEndpoint endp = { .endpoint = sEndp, .callback = callback };
+    NoxEndpoint endp = { .endpoint = sEndp, .callback = callback, .method = method };
     
     NoxEndpoint *ep = (NoxEndpoint *)malloc(sizeof(NoxEndpoint) * (coll->endpointCount + 1));
     memcpy(ep, coll->endpoints, sizeof(NoxEndpoint) * coll->endpointCount);
@@ -87,7 +88,7 @@ static inline NoxEndpointCollection *LoadApi(char *location) {
         return NULL;
     }
 
-    create(coll, CreateNoxEndpoint);
+    create(coll);
 
     return coll;
 }
@@ -190,5 +191,11 @@ void WriteMove(HttpResponse *resp, NoxData *dat);
 
 void WriteText(HttpResponse *resp, char *buff, int len);
 void WriteFile(HttpResponse *resp, NoxData *dat);
+
+
+void CreateGet(NoxEndpointCollection *collection, char *path, apiCallback callback);
+void CreatePost(NoxEndpointCollection *collection, char *path, apiCallback callback);
+void CreatePut(NoxEndpointCollection *collection, char *path, apiCallback callback);
+void CreateDelete(NoxEndpointCollection *collection, char *path, apiCallback callback);
 
 #endif

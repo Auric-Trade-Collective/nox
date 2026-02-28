@@ -96,9 +96,29 @@ func WriteText(w *C.HttpResponse, dat *C.char, length C.int) {
 	wrt.Write(buff)
 }
 
+//export CreateGet
+func CreateGet(coll *C.NoxEndpointCollection, path *C.char, cb C.apiCallback) {
+	C.CreateNoxEndpoint(coll, path, cb, 0);
+}
+
+//export CreatePost
+func CreatePost(coll *C.NoxEndpointCollection, path *C.char, cb C.apiCallback) {
+	C.CreateNoxEndpoint(coll, path, cb, 1);
+}
+
+//export CreatePut
+func CreatePut(coll *C.NoxEndpointCollection, path *C.char, cb C.apiCallback) {
+	C.CreateNoxEndpoint(coll, path, cb, 2);
+}
+
+//export CreateDelete
+func CreateDelete(coll *C.NoxEndpointCollection, path *C.char, cb C.apiCallback) {
+	C.CreateNoxEndpoint(coll, path, cb, 3);
+}
+
 type NoxApi struct {
 	handle *C.NoxEndpointCollection
-	Endpoints map[string]unsafe.Pointer
+	Endpoints map[string]map[string]unsafe.Pointer
 	Auth unsafe.Pointer //eventually there will be an option to load and use an auth function
 
 	//may put more in here in order to store API information and stuff
@@ -116,13 +136,27 @@ func CreateApi(libpath string) (*NoxApi, error) {
 
 	nox := &NoxApi{
 		handle: endp,
-		Endpoints: make(map[string]unsafe.Pointer),
+		Endpoints: make(map[string]map[string]unsafe.Pointer),
 	}
 
 	endps := getNoxEndpointSlice(endp)
 
 	for _, ep := range endps {
-		nox.Endpoints[C.GoString(ep.endpoint)] = unsafe.Pointer(ep.callback)
+		var method string
+		switch ep.method {
+		case 0: method = http.MethodGet
+		case 1: method = http.MethodPost
+		case 2: method = http.MethodPut
+		case 3: method = http.MethodDelete
+		}
+
+		path := C.GoString(ep.endpoint)
+		end, ok := nox.Endpoints[path]
+		if !ok {
+			nox.Endpoints[path] = make(map[string]unsafe.Pointer)
+			end = nox.Endpoints[path]
+		}
+		end[method] = unsafe.Pointer(ep.callback)
 	}
 
 	return nox, nil;
@@ -143,7 +177,7 @@ func (api *NoxApi) ExecuteEndpoint(path string, resp http.ResponseWriter, req *h
 		endpoint: pthStr,
 	}
 
-	C.InvokeApiCallback((*[0]byte)(api.Endpoints[path]), cResp, cReq)
+	C.InvokeApiCallback((*[0]byte)(api.Endpoints[path][req.Method]), cResp, cReq)
 }
 
 func (api *NoxApi) CloseApi() {

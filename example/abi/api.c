@@ -7,14 +7,24 @@ void DoSomething(HttpResponse *resp, HttpRequest *req) {
     // } else {
     //     WriteText(resp, "Bye", 3);
     // }
+    WriteText(resp, "Foo", 3);
+}
+
+void DoSomethingPost(HttpResponse *resp, HttpRequest *req) {
+    // if(X() == 5) {
+    //     WriteText(resp, "Hello", 5);
+    // } else {
+    //     WriteText(resp, "Bye", 3);
+    // }
+    WriteText(resp, "Foo Post", 8);
 }
 
 void DoSomething2(HttpResponse *resp, HttpRequest *req) {
     WriteText(resp, "Foo", 3);
 }
 
-void CreateNoxApi(NoxEndpointCollection *coll, createEndpoint endp) {
+void CreateNoxApi(NoxEndpointCollection *coll) {
     printf("Loading Nox API \n");
-    endp(coll, "foo", DoSomething);
-    endp(coll, "/bar", DoSomething2);
+    CreateGet(coll, "foo", DoSomething);
+    CreatePost(coll, "foo", DoSomethingPost);
 }
