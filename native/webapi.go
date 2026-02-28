@@ -170,11 +170,15 @@ func (api *NoxApi) ExecuteEndpoint(path string, resp http.ResponseWriter, req *h
 	pthStr := C.CString(path)
 	defer C.free(unsafe.Pointer(pthStr));
 
+	method := C.CString(req.Method)
+	defer C.free(unsafe.Pointer(method))
+
 	cResp := &C.HttpResponse{
 		gohandle: ptr,
 	}
 	cReq := &C.HttpRequest{
 		endpoint: pthStr,
+		method: method,
 	}
 
 	C.InvokeApiCallback((*[0]byte)(api.Endpoints[path][req.Method]), cResp, cReq)
