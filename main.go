@@ -16,14 +16,15 @@ var CLI struct {
 	Version kong.VersionFlag `help:"Print version and exit"`
 
 	Spin struct {
-		Dir string `help:"Test load a DLL file" default:"."`
+		Dir    string `help:"Test load a DLL file" default:"."`
+		Config string `help:"Path to config file" default:"nox.toml"`
 	} `cmd:"" help:"Spinup a nox server"`
 }
 
 func main() {
 	ctx := kong.Parse(&CLI,
 		kong.Name("nox"),
-		kong.Description("Nox webserver -- Version: " + Version),
+		kong.Description("Nox webserver -- Version: "+Version),
 		kong.Vars{
 			"version": Version,
 		},
@@ -36,15 +37,27 @@ func main() {
 		if err != nil {
 			panic(err.Error())
 		}
-		
+
 		if CLI.Spin.Dir != "" {
 			dir, _ = filepath.Abs(CLI.Spin.Dir)
 		}
 
-		buff, err := os.ReadFile(filepath.Join(dir, "nox.toml"))
+		var configPath string
+		if filepath.IsAbs(CLI.Spin.Config) {
+			configPath = CLI.Spin.Config
+		} else {
+			configPath = filepath.Join(dir, CLI.Spin.Config)
+		}
+
+		buff, err := os.ReadFile(configPath)
+		if err != nil {
+			logger.Panic("Failed to read config file: " + err.Error())
+		}
 
 		var conf webserver.Config
-		toml.Unmarshal(buff, &conf)
+		if err := toml.Unmarshal(buff, &conf); err != nil {
+			logger.Panic("Failed to parse config file: " + err.Error())
+		}
 
 		cDir, err := os.Getwd()
 		if err != nil {
@@ -57,7 +70,7 @@ func main() {
 		conf.Nox.Tls.CertFile, _ = filepath.Abs(conf.Nox.Tls.CertFile)
 		conf.Nox.Tls.KeyFile, _ = filepath.Abs(conf.Nox.Tls.KeyFile)
 		os.Chdir(cDir)
-		
+
 		logger.Write("Root is: " + conf.Nox.Root)
 
 		serve := webserver.NewWebserver(&conf)
