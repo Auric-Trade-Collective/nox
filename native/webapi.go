@@ -7,7 +7,7 @@ package native
 */
 import "C"
 import (
-	"fmt"
+	"YendisFish/nox/logger"
 	"io"
 	"net/http"
 	"os"
@@ -22,7 +22,7 @@ func WriteFile(w *C.HttpResponse, dat *C.NoxData) {
 	gohandle := cgo.Handle(w.gohandle)
 	wrt, ok := gohandle.Value().(http.ResponseWriter)
 	if !ok {
-		fmt.Println("Could not write to stream!")
+		logger.Warn("Could not write to stream!")
 		return
 	}
 
@@ -30,14 +30,14 @@ func WriteFile(w *C.HttpResponse, dat *C.NoxData) {
 
 	f, fErr := os.Open(filename)
 	if fErr != nil {
-		fmt.Println(fErr.Error())
+		logger.Warn(fErr.Error())
 	}
 	defer f.Close()
 
 	buff := make([]byte, 512)
 	_, err := f.Read(buff)
 	if err != nil && err != io.EOF {
-		fmt.Println(err.Error())
+		logger.Warn(err.Error())
 	}
 
 	conType := http.DetectContentType(buff)
@@ -54,7 +54,7 @@ func WriteCopy(w *C.HttpResponse, dat *C.NoxData) {
 	gohandle := cgo.Handle(w.gohandle)
 	wrt, ok := gohandle.Value().(http.ResponseWriter)
 	if !ok {
-		fmt.Println("Could not write to stream!")
+		logger.Warn("Could not write to stream!")
 		return
 	}
 
@@ -71,7 +71,7 @@ func WriteMove(w *C.HttpResponse, dat *C.NoxData) {
 	gohandle := cgo.Handle(w.gohandle)
 	wrt, ok := gohandle.Value().(http.ResponseWriter)
 	if !ok {
-		fmt.Println("Could not write to stream!")
+		logger.Warn("Could not write to stream!")
 		return
 	}
 
@@ -88,7 +88,7 @@ func WriteText(w *C.HttpResponse, dat *C.char, length C.int) {
 	gohandle := cgo.Handle(w.gohandle)
 	wrt, ok := gohandle.Value().(http.ResponseWriter)
 	if !ok {
-		fmt.Println("Could not write to stream!")
+		logger.Warn("Could not write to stream!")
 		return
 	}
 
@@ -131,7 +131,7 @@ func CreateApi(libpath string) (*NoxApi, error) {
 	defer C.free(unsafe.Pointer(cstr))
 
 	if endp == nil {
-		panic("Lib does not exist! " + libpath)
+		logger.Panic("Lib does not exist! " + libpath)
 	}
 
 	nox := &NoxApi{
@@ -195,7 +195,7 @@ func (api *NoxApi) CloseApi() {
 func getNoxEndpointSlice(endps *C.NoxEndpointCollection) []C.NoxEndpoint {
 	count := int(endps.endpointCount)
 	if count <= 0 {
-		fmt.Println("WARNING: No endpoints registered!")
+		logger.Warn("No endpoints registered!")
 		return nil
 	}
 

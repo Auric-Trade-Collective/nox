@@ -1,8 +1,8 @@
 package webserver
 
 import (
+	"YendisFish/nox/logger"
 	"YendisFish/nox/native"
-	"fmt"
 	"net/http"
 )
 
@@ -14,7 +14,7 @@ type Webserver struct {
 func NewWebserver(config *Config) *Webserver {
 	api, err := native.CreateApi(config.Nox.Api)
 	if err != nil {
-		panic(err.Error())
+		logger.Panic(err.Error())
 	}
 
 	hand := &NoxHandler{ Root: config.Nox.Root, Api: api, DirView: nil }
@@ -33,18 +33,14 @@ func (s *Webserver) Serve() {
 	if !s.config.Nox.Tls.Enabled {
 		err := s.server.ListenAndServe()
 		if err != nil {
-			panic(err.Error())
+			logger.Panic(err.Error())
 		}
 	} else {
 		err := s.server.ListenAndServeTLS(s.config.Nox.Tls.CertFile, 
 		                                  s.config.Nox.Tls.KeyFile)
 		
 		if err != nil {
-			panic(err.Error())
+			logger.Panic(err.Error())
 		}
 	}
-}
-
-func (s *Webserver) Display() {
-	fmt.Println(s.server.Addr)
 }

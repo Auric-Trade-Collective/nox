@@ -20,11 +20,16 @@ func Write(msg string) {
 }
 
 func Error(msg string) {
-
+	temper.Error(msg)
 }
 
 func Warn(msg string) {
-	
+	temper.Warn(msg)	
+}
+
+func Panic(msg string) {
+	temper.Error(msg)
+	os.Exit(-1)
 }
 
 func Color(code string, msg string) {

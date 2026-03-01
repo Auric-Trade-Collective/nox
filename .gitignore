@@ -1,3 +1,9 @@
 InstallationLog.txt
-example/*.pem
-example/abi/*.so
+
+*.pem
+
+*.so
+*.dll
+*.a
+*.o
+*.exe

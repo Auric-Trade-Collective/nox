@@ -1,6 +1,7 @@
 package webserver
 
 import (
+	"YendisFish/nox/logger"
 	"YendisFish/nox/native"
 	"net/http"
 	"os"
@@ -43,6 +44,7 @@ func (h *NoxHandler) handleLogicReq(w http.ResponseWriter, req *http.Request) {
 	//check for existing API endpoints, or anything else, call them and return output
 	if _, ok := h.Api.Endpoints[req.URL.Path]; ok {
 		h.Api.ExecuteEndpoint(req.URL.Path, w, req)
+		logger.Write("[" + req.Method + "] " + req.URL.Path + " called by " + req.RemoteAddr)
 	}
 }
 

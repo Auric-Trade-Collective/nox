@@ -1,8 +1,8 @@
 package main
 
 import (
+	"YendisFish/nox/logger"
 	"YendisFish/nox/webserver"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -48,7 +48,7 @@ func main() {
 
 		cDir, err := os.Getwd()
 		if err != nil {
-			panic(err.Error())
+			logger.Panic(err.Error())
 		}
 
 		os.Chdir(dir)
@@ -58,7 +58,7 @@ func main() {
 		conf.Nox.Tls.KeyFile, _ = filepath.Abs(conf.Nox.Tls.KeyFile)
 		os.Chdir(cDir)
 		
-		fmt.Println(conf.Nox.Root);
+		logger.Write("Root is: " + conf.Nox.Root)
 
 		serve := webserver.NewWebserver(&conf)
 		serve.Serve()
