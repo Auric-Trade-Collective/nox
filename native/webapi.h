@@ -9,8 +9,15 @@
 #include "dlls.h"
 
 typedef struct {
+    uintptr_t gohandle;
+
     char *endpoint;
     char *method;
+    char *remoteAddr;
+    
+    // uintptr_t headers;
+    // uintptr_t body;
+    // uintptr_t url;
 } HttpRequest;
 
 typedef struct {
@@ -198,5 +205,11 @@ void CreateGet(NoxEndpointCollection *collection, char *path, apiCallback callba
 void CreatePost(NoxEndpointCollection *collection, char *path, apiCallback callback);
 void CreatePut(NoxEndpointCollection *collection, char *path, apiCallback callback);
 void CreateDelete(NoxEndpointCollection *collection, char *path, apiCallback callback);
+
+size_t ReadBody(HttpRequest *req, uint8_t *buff, size_t bytesToRead);
+
+char *GetUri(HttpRequest *req, size_t *outLength);
+char *GetUriParam(HttpRequest *req, char *paramName, size_t index, size_t *outLength);
+size_t GetUriParamCount(HttpRequest *req, char *paramName);
 
 #endif

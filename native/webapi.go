@@ -17,6 +17,88 @@ import (
 
 //c exports
 
+//export ReadBody
+func ReadBody(req *C.HttpRequest, buffer *C.uint8_t, numBytes C.size_t) C.size_t {
+	gohandle := cgo.Handle(req.gohandle)
+	r, ok := gohandle.Value().(*http.Request)
+	if !ok {
+		logger.Warn("Could not get request body!")
+		return C.size_t(0)
+	}
+
+	n, err := r.Body.Read(unsafe.Slice((*byte)(unsafe.Pointer(buffer)), int(numBytes)))
+	if err != nil && err != io.EOF {
+		logger.Error(err.Error())
+	}
+	
+	return C.size_t(n)
+}
+
+//export GetUri
+func GetUri(req *C.HttpRequest, outLength *C.size_t) *C.char {
+	gohandle := cgo.Handle(req.gohandle)
+	r, ok := gohandle.Value().(*http.Request)
+	if !ok {
+		logger.Warn("Could not get request URL!")
+		return nil
+	}
+
+	ret := r.URL.RequestURI()
+	*outLength = C.size_t(len(ret))
+	return C.CString(ret)
+}
+
+//export GetUriParam
+func GetUriParam(req *C.HttpRequest, val *C.char, index C.size_t, outLength *C.size_t) *C.char {
+	gohandle := cgo.Handle(req.gohandle)
+	r, ok := gohandle.Value().(*http.Request)
+	if !ok {
+		logger.Warn("Could not get request URL!")
+		return nil
+	}
+
+	query := r.URL.Query()
+	
+	if value, ok := query[C.GoString(val)]; ok {
+		if len(value) > int(index) {
+			ret := value[int(index)]
+			*outLength = C.size_t(len(ret))
+			return C.CString(ret)
+		}
+	}
+
+	return nil
+}
+
+//export GetUriParamCount
+func GetUriParamCount(req *C.HttpRequest, val *C.char) C.size_t {
+	gohandle := cgo.Handle(req.gohandle)
+	r, ok := gohandle.Value().(*http.Request)
+	if !ok {
+		logger.Warn("Could not get request URL!")
+		return C.size_t(0)
+	}
+
+	query := r.URL.Query()
+	if value, ok := query[C.GoString(val)]; ok {
+		return C.size_t(len(value))
+	}
+	
+	return C.size_t(0)
+}
+
+//export GetHeader
+func GetHeader(req *C.HttpRequest, header *C.char) *C.char {
+	gohandle := cgo.Handle(req.gohandle)
+	r, ok := gohandle.Value().(*http.Request)
+	if !ok {
+		logger.Warn("Could not get request URL!")
+		return nil
+	}
+
+	return C.CString(r.Header.Get(C.GoString(header)))
+}
+
 //export WriteFile
 func WriteFile(w *C.HttpResponse, dat *C.NoxData) {
 	gohandle := cgo.Handle(w.gohandle)
@@ -171,6 +253,10 @@ func (api *NoxApi) ExecuteEndpoint(path string, resp http.ResponseWriter, req *h
 	ptr := C.uintptr_t(goHandle)
 	defer goHandle.Delete()
 
+	goHandle2 := cgo.NewHandle(req)
+	ptr2 := C.uintptr_t(goHandle2)
+	defer goHandle2.Delete()
+
 	pthStr := C.CString(path)
 	defer C.free(unsafe.Pointer(pthStr))
 
@@ -181,6 +267,7 @@ func (api *NoxApi) ExecuteEndpoint(path string, resp http.ResponseWriter, req *h
 		gohandle: ptr,
 	}
 	cReq := &C.HttpRequest{
+		gohandle: ptr2,
 		endpoint: pthStr,
 		method:   method,
 	}
