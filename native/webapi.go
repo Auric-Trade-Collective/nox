@@ -30,7 +30,7 @@ func ReadBody(req *C.HttpRequest, buffer *C.uint8_t, numBytes C.size_t) C.size_t
 	if err != nil && err != io.EOF {
 		logger.Error(err.Error())
 	}
-	
+
 	return C.size_t(n)
 }
 
@@ -58,7 +58,7 @@ func GetUriParam(req *C.HttpRequest, val *C.char, index C.size_t, outLength *C.s
 	}
 
 	query := r.URL.Query()
-	
+
 	if value, ok := query[C.GoString(val)]; ok {
 		if len(value) > int(index) {
 			ret := value[int(index)]
@@ -83,7 +83,7 @@ func GetUriParamCount(req *C.HttpRequest, val *C.char) C.size_t {
 	if value, ok := query[C.GoString(val)]; ok {
 		return C.size_t(len(value))
 	}
-	
+
 	return C.size_t(0)
 }
 
@@ -263,13 +263,17 @@ func (api *NoxApi) ExecuteEndpoint(path string, resp http.ResponseWriter, req *h
 	method := C.CString(req.Method)
 	defer C.free(unsafe.Pointer(method))
 
+	remoteAddr := C.CString(req.RemoteAddr)
+	defer C.free(unsafe.Pointer(remoteAddr))
+
 	cResp := &C.HttpResponse{
 		gohandle: ptr,
 	}
 	cReq := &C.HttpRequest{
-		gohandle: ptr2,
-		endpoint: pthStr,
-		method:   method,
+		gohandle:   ptr2,
+		endpoint:   pthStr,
+		method:     method,
+		remoteAddr: remoteAddr,
 	}
 
 	C.InvokeApiCallback((*[0]byte)(api.Endpoints[path][req.Method]), cResp, cReq)

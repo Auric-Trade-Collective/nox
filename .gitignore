@@ -7,3 +7,4 @@ InstallationLog.txt
 *.a
 *.o
 *.exe
+example/nox
