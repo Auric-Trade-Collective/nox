@@ -8,9 +8,17 @@ import (
 	"path/filepath"
 )
 
+// Looks silly but trust, it's much better
+var SupportedHttpMethods = map[string]bool{
+	"GET":    true,
+	"POST":   true,
+	"PUT":    true,
+	"DELETE": true,
+}
+
 type NoxHandler struct {
 	Root string
-	Api *native.NoxApi
+	Api  *native.NoxApi
 	//eventually map the endpoints to some ABI functions
 	DirView interface{}
 }
@@ -23,7 +31,7 @@ func (h *NoxHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if !os.IsNotExist(statErr) {
 			//return 500 internal error
 		}
-		
+
 		h.handleLogicReq(w, req)
 		return
 	}
@@ -32,12 +40,17 @@ func (h *NoxHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		h.handleDirReq(w, req, sanitized)
 		return
 	}
-	
+
 	http.ServeFile(w, req, sanitized)
 }
 
 func (h *NoxHandler) handleLogicReq(w http.ResponseWriter, req *http.Request) {
 	if h.Api == nil {
+		return
+	}
+
+	if !SupportedHttpMethods[req.Method] {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
 

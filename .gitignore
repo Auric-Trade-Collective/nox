@@ -8,3 +8,4 @@ InstallationLog.txt
 *.o
 *.exe
 example/nox
+/nox
