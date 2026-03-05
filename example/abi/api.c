@@ -7,7 +7,16 @@ void DoSomething(HttpResponse *resp, HttpRequest *req) {
     // } else {
     //     WriteText(resp, "Bye", 3);
     // }
-    WriteText(resp, "Foo", 3);
+
+    TrySetResponseHeader(resp, "test", "a test", 1);
+
+    char *ptr;
+    size_t len;
+    if(TryGetUriParam(req, "test", 0, &ptr, &len) == 1) {
+        WriteText(resp, ptr, (int)len);
+    }
+
+    free(ptr);
 }
 
 void DoSomethingPost(HttpResponse *resp, HttpRequest *req) {

@@ -206,10 +206,17 @@ void CreatePost(NoxEndpointCollection *collection, char *path, apiCallback callb
 void CreatePut(NoxEndpointCollection *collection, char *path, apiCallback callback);
 void CreateDelete(NoxEndpointCollection *collection, char *path, apiCallback callback);
 
+int TryGetResponseHeader(HttpResponse *resp, char *key, size_t index, char **out);
+int TrySetResponseHeader(HttpResponse *resp, char *key, char *val, int add);
+
+int TryGetRequestHeader(HttpRequest *resp, char *key, size_t index, char **out);
+int TrySetRequestHeader(HttpRequest *resp, char *key, char *val, int add);
+
+// the returned value is how many bytes are read
 size_t ReadBody(HttpRequest *req, uint8_t *buff, size_t bytesToRead);
 
 char *GetUri(HttpRequest *req, size_t *outLength);
-char *GetUriParam(HttpRequest *req, char *paramName, size_t index, size_t *outLength);
+int TryGetUriParam(HttpRequest *req, char *key, size_t index, char **out, size_t *outLen);
 size_t GetUriParamCount(HttpRequest *req, char *paramName);
 
 #endif

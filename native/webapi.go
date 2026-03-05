@@ -12,10 +12,108 @@ import (
 	"net/http"
 	"os"
 	"runtime/cgo"
+	"strings"
 	"unsafe"
 )
 
 //c exports
+
+//export TryGetResponseHeader
+func TryGetResponseHeader(w *C.HttpResponse, key *C.char, num C.size_t, out **C.char) C.int {
+	gohandle := cgo.Handle(w.gohandle)
+	wrt, ok := gohandle.Value().(http.ResponseWriter)
+	if !ok {
+		logger.Warn("Could not write to stream!")
+		return 0
+	}
+
+	goKey := C.GoString(key)
+
+	if vals := wrt.Header().Values(goKey); vals != nil {
+		if len(vals) > int(num) {
+			cStr := C.CString(vals[int(num)])
+
+			*out = cStr
+			return 1
+		}
+	}
+
+	return 0
+}
+
+//export TrySetResponseHeader
+func TrySetResponseHeader(w *C.HttpResponse, key *C.char, val *C.char, add C.int) C.int {
+	gohandle := cgo.Handle(w.gohandle)
+	wrt, ok := gohandle.Value().(http.ResponseWriter)
+	if !ok {
+		logger.Warn("Could not write to stream!")
+		return 0
+	}
+
+	goKey := C.GoString(key)
+	goVal := C.GoString(val)
+
+
+	if int(add) == 1 {
+		wrt.Header().Add(goKey, goVal)
+	} else {
+		wrt.Header().Set(goKey, goVal)
+	}
+
+	return 1
+}
+
+//export TryGetRequestHeader
+func TryGetRequestHeader(req *C.HttpRequest, key *C.char, num C.size_t, out **C.char) C.int {
+	gohandle := cgo.Handle(req.gohandle)
+	r, ok := gohandle.Value().(*http.Request)
+	if !ok {
+		logger.Warn("Could not get request body!")
+		return 0
+	}
+
+	goKey := C.GoString(key)
+
+	if strings.EqualFold(goKey, "Host") && r.Host != "" {
+		cStr := C.CString(r.Host)
+		*out = cStr
+
+		return 1
+	}
+
+	if vals := r.Header.Values(goKey); vals != nil {
+
+		if len(vals) > int(num) {
+			cStr := C.CString(vals[int(num)])
+
+			*out = cStr
+			return 1
+		}
+	}
+
+	return 0
+}
+
+//export TrySetRequestHeader
+func TrySetRequestHeader(req *C.HttpRequest, key *C.char, val *C.char, add C.int) C.int {
+	gohandle := cgo.Handle(req.gohandle)
+	r, ok := gohandle.Value().(*http.Request)
+	if !ok {
+		logger.Warn("Could not get request body!")
+		return 0
+	}
+
+	goKey := C.GoString(key)
+	goVal := C.GoString(val)
+
+	if int(add) == 1 {
+		r.Header.Add(goKey, goVal)
+	} else {
+		r.Header.Set(goKey, goVal)
+	}
+	
+	return 1
+}
 
 //export ReadBody
 func ReadBody(req *C.HttpRequest, buffer *C.uint8_t, numBytes C.size_t) C.size_t {
@@ -48,26 +146,25 @@ func GetUri(req *C.HttpRequest, outLength *C.size_t) *C.char {
 	return C.CString(ret)
 }
 
-//export GetUriParam
-func GetUriParam(req *C.HttpRequest, val *C.char, index C.size_t, outLength *C.size_t) *C.char {
+//export TryGetUriParam
+func TryGetUriParam(req *C.HttpRequest, key *C.char, index C.size_t, out **C.char, outLen *C.size_t) C.int {
 	gohandle := cgo.Handle(req.gohandle)
 	r, ok := gohandle.Value().(*http.Request)
 	if !ok {
 		logger.Warn("Could not get request URL!")
-		return nil
+		return 0
 	}
 
-	query := r.URL.Query()
-
-	if value, ok := query[C.GoString(val)]; ok {
-		if len(value) > int(index) {
-			ret := value[int(index)]
-			*outLength = C.size_t(len(ret))
-			return C.CString(ret)
+	if val, ok := r.URL.Query()[C.GoString(key)]; ok {
+		if len(val) > int(index) {
+			cStr := C.CString(val[int(index)])
+			*out = cStr
+			*outLen = C.size_t(len(val[int(index)]))
+			return 1
 		}
 	}
 
-	return nil
+	return 0
 }
 
 //export GetUriParamCount
@@ -87,17 +184,17 @@ func GetUriParamCount(req *C.HttpRequest, val *C.char) C.size_t {
 	return C.size_t(0)
 }
 
-//export GetHeader
-func GetHeader(req *C.HttpRequest, header *C.char) *C.char {
-	gohandle := cgo.Handle(req.gohandle)
-	r, ok := gohandle.Value().(*http.Request)
-	if !ok {
-		logger.Warn("Could not get request URL!")
-		return nil
-	}
-
-	return C.CString(r.Header.Get(C.GoString(header)))
-}
+// //export GetHeader
+// func GetHeader(req *C.HttpRequest, header *C.char) *C.char {
+// 	gohandle := cgo.Handle(req.gohandle)
+// 	r, ok := gohandle.Value().(*http.Request)
+// 	if !ok {
+// 		logger.Warn("Could not get request URL!")
+// 		return nil
+// 	}
+//
+// 	return C.CString(r.Header.Get(C.GoString(header)))
+// }
 
 //export WriteFile
 func WriteFile(w *C.HttpResponse, dat *C.NoxData) {
