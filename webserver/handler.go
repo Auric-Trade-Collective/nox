@@ -3,6 +3,7 @@ package webserver
 import (
 	"YendisFish/nox/logger"
 	"YendisFish/nox/native"
+	"YendisFish/nox/pages"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -30,6 +31,8 @@ func (h *NoxHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if statErr != nil {
 		if !os.IsNotExist(statErr) {
 			//return 500 internal error
+			w.Write([]byte(pages.Pg500))
+			return
 		}
 
 		h.handleLogicReq(w, req)
@@ -58,6 +61,9 @@ func (h *NoxHandler) handleLogicReq(w http.ResponseWriter, req *http.Request) {
 	if _, ok := h.Api.Endpoints[req.URL.Path]; ok {
 		h.Api.ExecuteEndpoint(req.URL.Path, w, req)
 		logger.Write("[" + req.Method + "] " + req.URL.Path + " called by " + req.RemoteAddr)
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(pages.Pg404))
 	}
 }
 
@@ -68,7 +74,8 @@ func (h *NoxHandler) handleDirReq(w http.ResponseWriter, req *http.Request, path
 		http.ServeFile(w, req, indexPath)
 		return
 	} else if !os.IsNotExist(indexErr) {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(pages.Pg404))
 		return
 	}
 

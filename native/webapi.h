@@ -32,10 +32,12 @@ typedef struct {
     int method; //0 GET, 1 POST, 2 PUT, 3 DELETE
 } NoxEndpoint;
 
+typedef int (*authCallback)(HttpRequest *);
 
 typedef struct {
     DllManager *dll;
     int endpointCount;
+    authCallback *auth;
     NoxEndpoint *endpoints;
 } NoxEndpointCollection;
 
@@ -88,6 +90,7 @@ static inline NoxEndpointCollection *LoadApi(char *location) {
     coll->dll = dll;
     coll->endpointCount = 0;
     coll->endpoints = NULL;
+    coll->auth = NULL;
 
     createNox create = (createNox)dlsym(dll->lib_handle, "CreateNoxApi");
 
@@ -116,11 +119,22 @@ static inline void CloseApi(NoxEndpointCollection *coll) {
         free(coll->endpoints);
     }
 
+    free(coll->auth);
     free(coll);
+}
+
+static inline void CreateAuth(NoxEndpointCollection *coll, authCallback cb) {
+    authCallback *cbp = (authCallback *)malloc(sizeof(authCallback));
+    *cbp = cb;
+    coll->auth = cbp;
 }
 
 static inline void InvokeApiCallback(apiCallback cb, HttpResponse *resp, HttpRequest *req) {
     cb(resp, req);
+}
+
+static inline int InvokeAuth(authCallback cb, HttpRequest *req) {
+    return cb(req);
 }
 
 //Here is where the JSON and Stream helpers will exist

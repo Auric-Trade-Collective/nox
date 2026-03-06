@@ -3,7 +3,10 @@ package webserver
 import (
 	"YendisFish/nox/logger"
 	"YendisFish/nox/native"
+	"YendisFish/nox/pages"
 	"net/http"
+	"os"
+	"path/filepath"
 )
 
 type Webserver struct {
@@ -26,6 +29,8 @@ func NewWebserver(config *Config) *Webserver {
 		config: config,
 	}
 
+	setupErrorPages(config.Nox.Root)
+
 	return server
 }
 
@@ -42,5 +47,30 @@ func (s *Webserver) Serve() {
 		if err != nil {
 			logger.Panic(err.Error())
 		}
+	}
+}
+
+func setupErrorPages(root string) {
+	supported := map[string]*string {
+		"401": &pages.Pg401,
+		"404": &pages.Pg404,
+		"500": &pages.Pg500,
+	}
+
+	fpath := filepath.Join(root, "/error/")
+	for k, v := range supported {
+		final := filepath.Join(fpath, k + ".html")
+		_, err := os.Stat(final)
+		if err != nil {
+			logger.Warn("Could not get information for custom error: " + final)
+			continue
+		}
+		
+		buff, err := os.ReadFile(final)
+		if err != nil {
+			logger.Panic("Could not read file " + final + " when setting custom errors")
+		}
+
+		*v = string(buff)
 	}
 }

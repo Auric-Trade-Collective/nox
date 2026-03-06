@@ -8,6 +8,7 @@ package native
 import "C"
 import (
 	"YendisFish/nox/logger"
+	"YendisFish/nox/pages"
 	"io"
 	"net/http"
 	"os"
@@ -298,7 +299,7 @@ func CreateDelete(coll *C.NoxEndpointCollection, path *C.char, cb C.apiCallback)
 type NoxApi struct {
 	handle    *C.NoxEndpointCollection
 	Endpoints map[string]map[string]unsafe.Pointer
-	Auth      unsafe.Pointer //eventually there will be an option to load and use an auth function
+	Auth      *C.authCallback //eventually there will be an option to load and use an auth function
 
 	//may put more in here in order to store API information and stuff
 }
@@ -316,6 +317,7 @@ func CreateApi(libpath string) (*NoxApi, error) {
 	nox := &NoxApi{
 		handle:    endp,
 		Endpoints: make(map[string]map[string]unsafe.Pointer),
+		Auth: endp.auth,
 	}
 
 	endps := getNoxEndpointSlice(endp)
@@ -343,6 +345,20 @@ func CreateApi(libpath string) (*NoxApi, error) {
 	}
 
 	return nox, nil
+}
+
+func (api *NoxApi) Authenticate(req *C.HttpRequest) bool {
+	if api.Auth == nil {
+		return true
+	}
+
+	val := int(C.InvokeAuth(*api.Auth, req))
+
+	if val == 1 {
+		return true
+	}
+
+	return false
 }
 
 func (api *NoxApi) ExecuteEndpoint(path string, resp http.ResponseWriter, req *http.Request) {
@@ -373,7 +389,12 @@ func (api *NoxApi) ExecuteEndpoint(path string, resp http.ResponseWriter, req *h
 		remoteAddr: remoteAddr,
 	}
 
-	C.InvokeApiCallback((*[0]byte)(api.Endpoints[path][req.Method]), cResp, cReq)
+	if api.Authenticate(cReq) {
+		C.InvokeApiCallback((*[0]byte)(api.Endpoints[path][req.Method]), cResp, cReq)
+	} else {
+		resp.WriteHeader(http.StatusUnauthorized)
+		resp.Write([]byte(pages.Pg401))
+	}
 }
 
 func (api *NoxApi) CloseApi() {
