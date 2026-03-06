@@ -14,10 +14,54 @@ import (
 	"os"
 	"runtime/cgo"
 	"strings"
+	"time"
 	"unsafe"
 )
 
 //c exports
+
+//export TryGetCookie
+func TryGetCookie(req *C.HttpRequest, key *C.char) *C.char {
+	gohandle := cgo.Handle(req.gohandle)
+	r, ok := gohandle.Value().(*http.Request)
+	if !ok {
+		logger.Warn("Could not get request body!")
+	}
+
+	goKey := C.GoString(key)
+
+	cookie, err := r.Cookie(goKey)
+	if err != nil {
+		// return 0 and set nil to value
+	}
+
+	return C.CString(cookie.Value)
+}
+
+//export TrySetCookie
+func TrySetCookie(w *C.HttpResponse, key *C.char, value *C.char, path *C.char, expires C.long, secure C.bool, httponly C.bool) {
+	gohandle := cgo.Handle(w.gohandle)
+	wrt, ok := gohandle.Value().(http.ResponseWriter)
+	if !ok {
+		logger.Warn("Could not write to stream!")
+	}
+
+	goKey := C.GoString(key)
+	goValue := C.GoString(value)
+	goPath := C.GoString(path)
+	goExpires := int64(expires)
+	goSecure := bool(secure)
+	goHttpOnly := bool(httponly)
+
+	http.SetCookie(wrt, &http.Cookie{
+		Name: goKey,
+		Value: goValue,
+		Path: goPath,
+		Expires: time.Unix(goExpires, 0),
+		Secure: goSecure,
+		HttpOnly: goHttpOnly,
+	})
+}
 
 //export TryGetResponseHeader
 func TryGetResponseHeader(w *C.HttpResponse, key *C.char, num C.size_t, out **C.char) C.int {

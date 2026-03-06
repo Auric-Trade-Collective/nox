@@ -3,6 +3,12 @@
 
 typedef struct {
 
-} Plugin;
+} PluginCtx;
+
+typedef void (*pluginMain)(PluginCtx*);
+
+static inline void InvokePluginMain(PluginCtx *ctx, pluginMain cb) {
+    cb(ctx);
+}
 
 #endif

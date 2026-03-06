@@ -2,6 +2,7 @@
 #define WEBAPI_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 #include <dlfcn.h> 
 #include <stdlib.h>
@@ -232,5 +233,8 @@ size_t ReadBody(HttpRequest *req, uint8_t *buff, size_t bytesToRead);
 char *GetUri(HttpRequest *req, size_t *outLength);
 int TryGetUriParam(HttpRequest *req, char *key, size_t index, char **out, size_t *outLen);
 size_t GetUriParamCount(HttpRequest *req, char *paramName);
+
+char *TryGetCookie(HttpRequest *req, char *key);
+void TrySetCookie(HttpResponse *resp, char *key, char *value, char *path, long expires, bool secure, bool httponly);
 
 #endif

@@ -19,6 +19,8 @@ var CLI struct {
 		Dir    string `help:"Test load a DLL file" default:"."`
 		Config string `help:"Path to config file" default:"nox.toml"`
 	} `cmd:"" help:"Spinup a nox server"`
+
+	Install struct {} `help:"Install nox into your system and path" cmd:""`
 }
 
 func main() {
