@@ -10,7 +10,7 @@ import (
 	toml "github.com/pelletier/go-toml/v2"
 )
 
-var Version = "0.3"
+var Version = "0.0.1"
 
 var CLI struct {
 	Version kong.VersionFlag `help:"Print version and exit"`
@@ -21,6 +21,7 @@ var CLI struct {
 	} `cmd:"" help:"Spinup a nox server"`
 
 	Install struct {} `help:"Install nox into your system and path" cmd:""`
+	Init struct {} `help:"Create a nox.toml file" cmd:""`
 }
 
 func main() {
@@ -34,6 +35,8 @@ func main() {
 	)
 
 	switch ctx.Command() {
+	case "init": initNoxToml()
+	case "install": installNox()
 	case "spin":
 		dir, err := filepath.Abs("./")
 		if err != nil {
@@ -77,5 +80,48 @@ func main() {
 
 		serve := webserver.NewWebserver(&conf)
 		serve.Serve()
+	}
+}
+
+func installNox() {
+	binPath, err := os.Executable()
+	if err != nil {
+		logger.Panic("Cannot find local noxfile to copy into /usr/bin")
+	}
+
+	buff, err := os.ReadFile(binPath)
+	if err != nil {
+		logger.Panic("Cannot copy " + binPath + " to /usr/bin")
+	}
+
+	err = os.WriteFile("/usr/bin/nox", buff, 0755)
+	if err != nil {
+		logger.Panic("Cannot copy " + binPath + " to /usr/bin")
+	}
+}
+
+var tomlDat = `
+[nox]
+addr = ":5432"
+root = "./web/"
+api = "./abi/libapi.so"
+`
+
+func initNoxToml() {
+	curDur, err := os.Getwd()
+	if err != nil {
+		logger.Panic("Failed to get current directory.")
+	}
+
+	path := filepath.Join(curDur, "nox.toml")
+
+	fle, err := os.Create(path)
+	if err != nil {
+		logger.Panic("Could not create nox.toml")
+	}
+
+	_, err = fle.WriteString(tomlDat)
+	if err != nil {
+		logger.Panic("Could not write to nox.toml")
 	}
 }

@@ -8,8 +8,8 @@ api = "./abi/libapi.so"
 enabled = false
 cert_file = "./cert.pem"
 key_file = "./key.pem"
-# protocols = ["TLSv1.2", "TLSv1.3"] do I want this?
-ciphers = "N/A"
+# protocols = ["tlsv1.2", "tlsv1.3"] do i want this?
+ciphers = "n/a"
 
 # [build]
 # this will one day include information on how nox can build APIs
