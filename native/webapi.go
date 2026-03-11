@@ -286,7 +286,6 @@ func WriteCopy(w *C.HttpResponse, dat *C.NoxData) {
 
 	toWrite := make([]byte, dat.length)
 	copy(toWrite, buff)
-
 	
 	conType := http.DetectContentType(buff)
 	wrt.Header().Set("Content-Type", conType)
@@ -303,9 +302,8 @@ func WriteMove(w *C.HttpResponse, dat *C.NoxData) {
 		return
 	}
 
-	//IT IS VITAL THAT THIS FUNCTION CLEANS UP THE dat POINTER AFTER ITSELF!!!!!
-	// right now it just copies over the buffer, should eventually do more than that
 	buff := unsafe.Slice((*byte)(dat.buff), dat.length)
+	defer C.free(unsafe.Pointer(dat.buff))
 
 	conType := http.DetectContentType(buff)
 	wrt.Header().Set("Content-Type", conType)

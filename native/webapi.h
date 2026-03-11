@@ -73,10 +73,14 @@ static inline void CreateNoxEndpoint(NoxEndpointCollection *coll, char *endpoint
     NoxEndpoint endp = { .endpoint = sEndp, .callback = callback, .method = method };
     
     NoxEndpoint *ep = (NoxEndpoint *)malloc(sizeof(NoxEndpoint) * (coll->endpointCount + 1));
-    memcpy(ep, coll->endpoints, sizeof(NoxEndpoint) * coll->endpointCount);
-    ep[coll->endpointCount] = endp;
 
+    if(coll->endpoints != NULL) {
+        memcpy(ep, coll->endpoints, sizeof(NoxEndpoint) * coll->endpointCount);
+    }
+
+    ep[coll->endpointCount] = endp;
     free(coll->endpoints);
+
     coll->endpoints = ep;
     coll->endpointCount++;
 }
