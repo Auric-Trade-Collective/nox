@@ -287,7 +287,7 @@ func WriteCopy(w *C.HttpResponse, dat *C.NoxData) {
 	toWrite := make([]byte, dat.length)
 	copy(toWrite, buff)
 	
-	conType := http.DetectContentType(buff)
+	conType := C.GoString(dat.contentType)
 	wrt.Header().Set("Content-Type", conType)
 
 	wrt.Write(buff)
@@ -303,9 +303,8 @@ func WriteMove(w *C.HttpResponse, dat *C.NoxData) {
 	}
 
 	buff := unsafe.Slice((*byte)(dat.buff), dat.length)
-	defer C.free(unsafe.Pointer(dat.buff))
 
-	conType := http.DetectContentType(buff)
+	conType := C.GoString(dat.contentType)
 	wrt.Header().Set("Content-Type", conType)
 
 	wrt.Write(buff)

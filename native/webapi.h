@@ -166,17 +166,19 @@ typedef struct {
     size_t length;
     char *filename; // CSTRING, can be NULL
     NoxStreamSection section;
+    char *contentType;
 } NoxData;
 
 
-__attribute__((warning("NoxBuffer: Keep in mind the returned pointer will take ownership of the buffer passed")))
-static inline NoxData *NoxBuffer(uint8_t *buff, size_t len) {
+__attribute__((warning("NoxBuffer: Keep in mind the returned pointer will take ownership of the buffer passed to it")))
+static inline NoxData *NoxBuffer(uint8_t *buff, size_t len, char *contentType) {
     NoxData *dat = (NoxData *)malloc(sizeof(NoxData));
     dat->type = BYTES;
     dat->buff = buff;
     dat->length = len;
     dat->filename = NULL;
     dat->section = (NoxStreamSection)0;
+    dat->contentType = strdup(contentType);
 
     return dat;
 }
@@ -207,6 +209,7 @@ __attribute__((warning("FreeData: This will free any buffers you currently have 
 static inline void FreeData(NoxData *dat) {
     free(dat->buff);
     free(dat->filename);
+    free(dat->contentType);
     free(dat);
 }
 
