@@ -32,7 +32,7 @@ func TryGetCookie(req *C.HttpRequest, key *C.char) *C.char {
 
 	cookie, err := r.Cookie(goKey)
 	if err != nil {
-		// return 0 and set nil to value
+		return nil
 	}
 
 	return C.CString(cookie.Value)
