@@ -71,7 +71,11 @@ func main() {
 
 		os.Chdir(dir)
 		conf.Nox.Root, _ = filepath.Abs(conf.Nox.Root)
-		conf.Nox.Api, _ = filepath.Abs(conf.Nox.Api)
+
+		if conf.Nox.Api != "" {
+			conf.Nox.Api, _ = filepath.Abs(conf.Nox.Api)
+		}
+
 		conf.Nox.Tls.CertFile, _ = filepath.Abs(conf.Nox.Tls.CertFile)
 		conf.Nox.Tls.KeyFile, _ = filepath.Abs(conf.Nox.Tls.KeyFile)
 		os.Chdir(cDir)
@@ -104,7 +108,7 @@ var tomlDat = `
 [nox]
 addr = ":5432"
 root = "./web/"
-api = "./abi/libapi.so"
+api = ""
 `
 
 func initNoxToml() {

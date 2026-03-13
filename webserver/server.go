@@ -15,9 +15,13 @@ type Webserver struct {
 }
 
 func NewWebserver(config *Config) *Webserver {
-	api, err := native.CreateApi(config.Nox.Api)
-	if err != nil {
-		logger.Panic(err.Error())
+	var api *native.NoxApi = nil
+	var err error
+	if config.Nox.Api != "" {
+		api, err = native.CreateApi(config.Nox.Api)
+		if err != nil {
+			logger.Panic(err.Error())
+		}
 	}
 
 	hand := &NoxHandler{ Root: config.Nox.Root, Api: api, DirView: nil }
