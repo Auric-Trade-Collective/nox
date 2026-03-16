@@ -2,7 +2,7 @@ package webserver
 
 import (
 	"YendisFish/nox/logger"
-	"YendisFish/nox/native"
+	"YendisFish/nox/webapi"
 	"YendisFish/nox/pages"
 	"net/http"
 	"os"
@@ -15,10 +15,10 @@ type Webserver struct {
 }
 
 func NewWebserver(config *Config) *Webserver {
-	var api *native.NoxApi = nil
+	var api *webapi.NoxApi = nil
 	var err error
 	if config.Nox.Api != "" {
-		api, err = native.CreateApi(config.Nox.Api)
+		api, err = webapi.CreateApi(config.Nox.Api)
 		if err != nil {
 			logger.Panic(err.Error())
 		}
