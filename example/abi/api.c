@@ -64,4 +64,6 @@ void CreateNoxApi(NoxEndpointCollection *coll) {
     CreateGet(coll, "getcookie", SomeCookie);
     CreateGet(coll, "setcookie", OtherCookie);
     CreatePost(coll, "foo", DoSomethingPost);
+
+    LogWrite("Nox API", "Okay we can log from here!");
 }

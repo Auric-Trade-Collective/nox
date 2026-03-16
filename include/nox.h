@@ -1,5 +1,5 @@
-#ifndef WEBAPI_H
-#define WEBAPI_H
+#ifndef NOX_H
+#define NOX_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "dlls.h"
+
+// APIS
 
 typedef struct {
     uintptr_t gohandle;
@@ -243,5 +245,43 @@ size_t GetUriParamCount(HttpRequest *req, char *paramName);
 
 char *TryGetCookie(HttpRequest *req, char *key);
 void TrySetCookie(HttpResponse *resp, char *key, char *value, char *path, long expires, bool secure, bool httponly);
+
+void LogWrite(char *name_space, char *msg);
+void LogWarn(char *name_space, char *msg);
+void LogError(char *name_space, char *msg);
+void LogPanic(char *name_space, char *msg);
+
+//PLUGINS
+
+typedef struct {
+    void *handle;
+} PluginCtx;
+
+typedef struct {
+    int type;
+    char *error;
+    HttpRequest *httpRequest;
+    HttpResponse *httpResponse;
+} EventCtx;
+
+typedef void (*pluginMain)(PluginCtx*);
+typedef void (*eventCallback)(EventCtx*);
+
+static inline void InvokePluginMain(PluginCtx *ctx, pluginMain cb) {
+    cb(ctx);
+}
+
+enum EventType {
+    OnLog = 0,
+    OnGet = 1,
+    OnPost = 2,
+    OnPut = 3,
+    OnDelete = 4,
+    OnError = 5
+};
+
+static inline void RegisterEvent(PluginCtx *plugin, int eventType, eventCallback cb) {
+
+}
 
 #endif

@@ -1,8 +1,8 @@
-package native
+package webapi
 
 /*
 #cgo LDFLAGS: -ldl
-#include "webapi.h"
+#include "../include/nox.h"
 #include <stdint.h>
 */
 import "C"
@@ -353,6 +353,7 @@ type NoxApi struct {
 	//may put more in here in order to store API information and stuff
 }
 
+// next versions should accept a []string for libpath and begin implementing multi-file API loading
 func CreateApi(libpath string) (*NoxApi, error) {
 	cstr := C.CString(libpath)
 	endp := C.LoadApi(cstr)

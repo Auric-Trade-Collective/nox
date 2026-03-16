@@ -1,8 +1,9 @@
 [nox]
 addr = ":5432"
 root = "./web/"
-# api = "./abi/libapi.so"
-api = "../../nox-go-test/libapi2.so"
+api = "./abi/libapi.so"
+# api = "../../nox-go-test/libapi2.so"
+# api = "../../petra/libpetra.so"
 
 [nox.tls]
 enabled = false
