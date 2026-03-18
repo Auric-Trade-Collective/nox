@@ -17,8 +17,8 @@ type Webserver struct {
 func NewWebserver(config *Config) *Webserver {
 	var api *webapi.NoxApi = nil
 	var err error
-	if config.Nox.Api != "" {
-		api, err = webapi.CreateApi(config.Nox.Api)
+	if len(config.Nox.Api) > 0 {
+		api, err = webapi.CreateApi(config.Nox.Api, config.Nox.AuthLocation)
 		if err != nil {
 			logger.Panic(err.Error())
 		}

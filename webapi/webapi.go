@@ -346,7 +346,7 @@ func CreateDelete(coll *C.NoxEndpointCollection, path *C.char, cb C.apiCallback)
 }
 
 type NoxApi struct {
-	handle    *C.NoxEndpointCollection
+	handle    []*C.NoxEndpointCollection
 	Endpoints map[string]map[string]unsafe.Pointer
 	Auth      *C.authCallback //eventually there will be an option to load and use an auth function
 
@@ -354,44 +354,51 @@ type NoxApi struct {
 }
 
 // next versions should accept a []string for libpath and begin implementing multi-file API loading
-func CreateApi(libpath string) (*NoxApi, error) {
-	cstr := C.CString(libpath)
-	endp := C.LoadApi(cstr)
-
-	defer C.free(unsafe.Pointer(cstr))
-
-	if endp == nil {
-		logger.Panic("Lib does not exist! " + libpath)
-	}
-
+func CreateApi(libpaths []string, authLib *string) (*NoxApi, error) {
 	nox := &NoxApi{
-		handle:    endp,
+		handle:    make([]*C.NoxEndpointCollection, 1),
 		Endpoints: make(map[string]map[string]unsafe.Pointer),
-		Auth: endp.auth,
+		Auth: nil,
 	}
 
-	endps := getNoxEndpointSlice(endp)
+	for _, libpath := range libpaths {
+		cstr := C.CString(libpath)
+		endp := C.LoadApi(cstr)
+		defer C.free(unsafe.Pointer(cstr))
 
-	for _, ep := range endps {
-		var method string
-		switch ep.method {
-		case 0:
-			method = http.MethodGet
-		case 1:
-			method = http.MethodPost
-		case 2:
-			method = http.MethodPut
-		case 3:
-			method = http.MethodDelete
+		nox.handle = append(nox.handle, endp)
+
+		if endp == nil {
+			logger.Panic("Lib does not exist! " + libpath)
 		}
 
-		path := C.GoString(ep.endpoint)
-		end, ok := nox.Endpoints[path]
-		if !ok {
-			nox.Endpoints[path] = make(map[string]unsafe.Pointer)
-			end = nox.Endpoints[path]
+		endps := getNoxEndpointSlice(endp)
+
+		for _, ep := range endps {
+			var method string
+			switch ep.method {
+			case 0:
+				method = http.MethodGet
+			case 1:
+				method = http.MethodPost
+			case 2:
+				method = http.MethodPut
+			case 3:
+				method = http.MethodDelete
+			}
+
+			path := C.GoString(ep.endpoint)
+			end, ok := nox.Endpoints[path]
+			if !ok {
+				nox.Endpoints[path] = make(map[string]unsafe.Pointer)
+				end = nox.Endpoints[path]
+			}
+			end[method] = unsafe.Pointer(ep.callback)
 		}
-		end[method] = unsafe.Pointer(ep.callback)
+
+		if authLib != nil && *authLib == libpath && endp.auth != nil {
+			nox.Auth = endp.auth
+		}
 	}
 
 	return nox, nil
@@ -448,7 +455,9 @@ func (api *NoxApi) ExecuteEndpoint(path string, resp http.ResponseWriter, req *h
 }
 
 func (api *NoxApi) CloseApi() {
-	C.CloseApi(api.handle)
+	for _, handle := range api.handle {
+		C.CloseApi(handle)
+	}
 }
 
 func getNoxEndpointSlice(endps *C.NoxEndpointCollection) []C.NoxEndpoint {

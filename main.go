@@ -72,8 +72,10 @@ func main() {
 		os.Chdir(dir)
 		conf.Nox.Root, _ = filepath.Abs(conf.Nox.Root)
 
-		if conf.Nox.Api != "" {
-			conf.Nox.Api, _ = filepath.Abs(conf.Nox.Api)
+		for i, api := range conf.Nox.Api {
+			if api != "" {
+				conf.Nox.Api[i], _ = filepath.Abs(conf.Nox.Api[i])
+			}
 		}
 
 		conf.Nox.Tls.CertFile, _ = filepath.Abs(conf.Nox.Tls.CertFile)

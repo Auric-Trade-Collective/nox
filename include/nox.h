@@ -273,11 +273,10 @@ static inline void InvokePluginMain(PluginCtx *ctx, pluginMain cb) {
 
 enum EventType {
     OnLog = 0,
-    OnGet = 1,
-    OnPost = 2,
-    OnPut = 3,
-    OnDelete = 4,
-    OnError = 5
+    OnError = 1,
+    OnRequest = 2,
+    OnResponse = 3,
+    OnAny = 4,
 };
 
 static inline void RegisterEvent(PluginCtx *plugin, int eventType, eventCallback cb) {

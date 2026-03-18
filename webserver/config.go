@@ -4,7 +4,8 @@ type Config struct {
 	Nox struct {
 		Addr string `toml:"addr"`
 		Root string	`toml:"root"`
-		Api string	`toml:"api"`
+		Api []string	`toml:"api"`
+		AuthLocation *string `toml:"auth_location"`
 		Tls struct {
 			Enabled bool `toml:"enabled"`
 			CertFile string `toml:"cert_file"`

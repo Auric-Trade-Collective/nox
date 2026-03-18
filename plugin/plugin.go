@@ -7,7 +7,8 @@ package plugin
 import "C"
 import "unsafe"
 
-var ActivePlugins []Plugin
+var Routines []Plugin
+var Blockers []Plugin
 
 type Plugin struct {
 	events map[EventType]unsafe.Pointer
@@ -24,5 +25,9 @@ const (
 )
 
 func TriggerEvent(tp EventType) {
+	go triggerRoutines(tp)
+}
+
+func triggerRoutines(tp EventType) {
 
 }
