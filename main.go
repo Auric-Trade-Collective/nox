@@ -10,7 +10,7 @@ import (
 	toml "github.com/pelletier/go-toml/v2"
 )
 
-var Version = "0.0.1"
+var Version = "0.0.2"
 
 var CLI struct {
 	Version kong.VersionFlag `help:"Print version and exit"`
