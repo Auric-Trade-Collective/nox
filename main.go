@@ -113,7 +113,7 @@ var tomlDat = `
 [nox]
 addr = ":5432"
 root = "./web/"
-api = ""
+api = []
 `
 var goDat = `
 package main
