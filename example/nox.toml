@@ -1,10 +1,11 @@
 [nox]
 addr = ":5432"
-root = "./web/"
-api = ["./abi/libapi.so", "../../nox-go-test/libapi2.so"]
+root = ""
+api = ["./abi/libapi.so"]
 # api = "../../nox-go-test/libapi2.so"
 # api = "../../petra/libpetra.so"
-auth_location = "./abi/libapi.so"
+# auth_location = "./abi/libapi.so"
+# api = []
 
 [nox.tls]
 enabled = false
@@ -16,5 +17,5 @@ ciphers = "n/a"
 # [build]
 # this will one day include information on how nox can build APIs
 
-[nox.dependencies]
-"postgres" = "https://noxrepository.com/creator/posgres"
+# [nox.dependencies]
+# "postgres" = "https://noxrepository.com/creator/posgres"

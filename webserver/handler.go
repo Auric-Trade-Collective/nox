@@ -25,17 +25,29 @@ type NoxHandler struct {
 }
 
 func (h *NoxHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	if h.Root == "" {
+		if h.Api != nil {
+			h.handleLogicReq(w, req)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(pages.Pg404))
+		}
+
+		return
+	}
+	
 	reqPath := filepath.Join(h.Root, req.URL.Path)
 	sanitized := filepath.Clean(reqPath) //force it to be within the root!
 	reqInfo, statErr := os.Stat(sanitized)
 	if statErr != nil {
 		if !os.IsNotExist(statErr) {
-			//return 500 internal error
 			w.Write([]byte(pages.Pg500))
 			return
 		}
 
-		h.handleLogicReq(w, req)
+		if h.Root != "" {
+			h.handleLogicReq(w, req)
+		}
 		return
 	}
 
