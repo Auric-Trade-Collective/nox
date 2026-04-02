@@ -29,3 +29,4 @@ native ABI.
 
 - https://github.com/Auric-Trade-Collective/nox-go
 - https://github.com/Auric-Trade-Collective/nox-py
+- Flux wrapper coming!
