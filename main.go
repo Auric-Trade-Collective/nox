@@ -115,22 +115,6 @@ addr = ":5432"
 root = "./web/"
 api = []
 `
-var goDat = `
-package main
-
-import "C"
-import (
-	noxgo "github.com/Auric-Trade-Collective/nox-go"
-)
-
-func main() { }
-
-//export NoxMain
-func NoxMain() {
-	nox := noxgo.InitNox()
-	_ = nox
-}
-`
 
 func initNoxToml() {
 	curDur, err := os.Getwd()
