@@ -397,6 +397,7 @@ func CreateApi(libpaths []string, authLib *string) (*NoxApi, error) {
 		}
 
 		if authLib != nil && *authLib == libpath && endp.auth != nil {
+			logger.Write("Registered auth function in file " + *authLib + " successfully!")
 			nox.Auth = endp.auth
 		}
 	}

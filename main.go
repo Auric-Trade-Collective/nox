@@ -75,6 +75,10 @@ func main() {
 			conf.Nox.Root, _ = filepath.Abs(conf.Nox.Root)
 		}
 
+		if conf.Nox.AuthLocation != nil {
+			*conf.Nox.AuthLocation, _ = filepath.Abs(*conf.Nox.AuthLocation)
+		}
+
 		for i, api := range conf.Nox.Api {
 			if api != "" {
 				conf.Nox.Api[i], _ = filepath.Abs(conf.Nox.Api[i])

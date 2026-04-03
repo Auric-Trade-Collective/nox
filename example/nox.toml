@@ -4,7 +4,7 @@ root = ""
 api = ["./abi/libapi.so"]
 # api = "../../nox-go-test/libapi2.so"
 # api = "../../petra/libpetra.so"
-# auth_location = "./abi/libapi.so"
+auth_location = "./abi/libapi.so"
 # api = []
 
 [nox.tls]
