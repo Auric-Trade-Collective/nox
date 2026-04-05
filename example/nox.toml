@@ -1,10 +1,10 @@
 [nox]
 addr = ":5432"
-root = ""
-api = ["./abi/libapi.so"]
+root = "web"
+api = ["./abi/libapi.dylib"]
 # api = "../../nox-go-test/libapi2.so"
 # api = "../../petra/libpetra.so"
-auth_location = "./abi/libapi.so"
+# auth_location = "./abi/libapi.so"
 # api = []
 
 [nox.tls]

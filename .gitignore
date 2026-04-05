@@ -6,6 +6,7 @@ bin/
 
 *.so
 *.dll
+*.dylib
 *.a
 *.o
 *.exe
