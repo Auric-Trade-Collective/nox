@@ -1,23 +1,19 @@
 #include "../../include/nox.h"
 #include <stdio.h>
-#include <strings.h>
-
-static char *secret;
+#include <string.h>
+#include <time.h>
 
 void SomeCookie(HttpResponse *resp, HttpRequest *req) {
-    char *var = GetEnv(secret, "test");
-    WriteText(resp, var, strlen(var));
+    TrySetCookie(resp, "a", "abcd", "/", time(NULL) + (60 * 60 * 24), false, false);
 }
 
 int NoxAuth(HttpRequest *req) {
-    return 1;
+    return 0;
 }
 
 void CreateNoxApi(NoxEndpointCollection *coll) {
-
     printf("Loading Nox API \n");
 
-    secret = RegisterName(coll, "test");
     CreateAuth(coll, NoxAuth);
     CreateGet(coll, "/foo", SomeCookie);
 

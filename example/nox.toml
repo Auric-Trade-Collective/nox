@@ -6,11 +6,6 @@ api = ["./abi/libapi.dylib"]
 # api = "../../petra/libpetra.so"
 # auth_location = "./abi/libapi.so"
 # api = []
-# env = {
-#     test = {
-#         test = "Hi!"
-#     }
-# }
 
 [nox.tls]
 enabled = false
@@ -24,6 +19,3 @@ ciphers = "n/a"
 
 # [nox.dependencies]
 # "postgres" = "https://noxrepository.com/creator/posgres"
-
-[nox.env]
-test = { test = "Hi!" }
