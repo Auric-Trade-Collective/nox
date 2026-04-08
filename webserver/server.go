@@ -3,7 +3,7 @@ package webserver
 import (
 	"YendisFish/nox/logger"
 	"YendisFish/nox/pages"
-	"YendisFish/nox/webapi"
+	// "YendisFish/nox/webapi"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,16 +15,17 @@ type Webserver struct {
 }
 
 func NewWebserver(config *Config) *Webserver {
-	var api *webapi.NoxApi = nil
+	var api *NoxApi = nil
 	var err error
 	if len(config.Nox.Api) > 0 {
-		api, err = webapi.CreateApi(config.Nox.Api, config.Nox.AuthLocation)
+		api, err = CreateApi(config.Nox.Api, config.Nox.AuthLocation)
 		if err != nil {
 			logger.Panic(err.Error())
 		}
 	}
 
 	hand := &NoxHandler{ Root: config.Nox.Root, Api: api, DirView: nil }
+	Handler = hand
 	server := &Webserver{
 		server: &http.Server{
 			Addr: config.Nox.Addr,

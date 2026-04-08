@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "dlls.h"
+#include<sys/random.h>
 
 // APIS
 
@@ -42,6 +43,8 @@ typedef struct {
     int endpointCount;
     authCallback *auth;
     NoxEndpoint *endpoints;
+    char *name;
+    char *secret;
 } NoxEndpointCollection;
 
 typedef void (*createEndpoint)(NoxEndpointCollection*, char*, apiCallback, int);
@@ -98,6 +101,8 @@ static inline NoxEndpointCollection *LoadApi(char *location) {
     coll->endpointCount = 0;
     coll->endpoints = NULL;
     coll->auth = NULL;
+    coll->name = NULL;
+    coll->secret = NULL;
 
     createNox create = (createNox)dlsym(dll->lib_handle, "CreateNoxApi");
 
@@ -127,7 +132,39 @@ static inline void CloseApi(NoxEndpointCollection *coll) {
     }
 
     free(coll->auth);
+    free(coll->name);
+    free(coll->secret);
     free(coll);
+}
+
+
+static inline void generate_secure_string(char *buffer, size_t length) {
+    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    uint8_t random_data[length];
+
+    // Fill the byte array with cryptographically secure bytes
+    if (getrandom(random_data, length, 0) == -1) {
+        perror("getrandom failed");
+        return;
+    }
+
+    // Map random bytes to your desired characters
+    for (size_t i = 0; i < length; i++) {
+        buffer[i] = charset[random_data[i] % (sizeof(charset) - 1)];
+    }
+    buffer[length] = '\0';
+}
+
+static inline char *RegisterName(NoxEndpointCollection *coll, char *name) {
+    char *secure;
+    generate_secure_string(secure, 16);
+
+    char *duped = strdup(name);
+    
+    coll->name = duped;
+    coll->secret = secure;
+
+    return secure;
 }
 
 static inline void CreateAuth(NoxEndpointCollection *coll, authCallback cb) {
@@ -250,6 +287,8 @@ void LogWrite(char *name_space, char *msg);
 void LogWarn(char *name_space, char *msg);
 void LogError(char *name_space, char *msg);
 void LogPanic(char *name_space, char *msg);
+
+char *GetEnv(char *secret, char *key);
 
 //PLUGINS
 

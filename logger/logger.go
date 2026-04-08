@@ -5,6 +5,8 @@ package logger
 */
 import "C"
 import (
+	"YendisFish/nox/global"
+	"encoding/json"
 	"os"
 
 	"github.com/YendisFish/temper"
@@ -34,6 +36,19 @@ func Warn(msg string) {
 func Panic(msg string) {
 	temper.Error(msg)
 	os.Exit(-1)
+}
+
+func Debug(msg string) {
+	if global.Debug {
+		temper.Custom([]string{"Debug", msg}, temper.Magenta)
+	}
+}
+
+func DebugJson(obj any) {
+	if global.Debug {
+		data, _ := json.MarshalIndent(obj, "", "    ")
+		temper.Custom([]string{"Debug", string(data)}, temper.Magenta)
+	}
 }
 
 func Color(code string, msg string) {

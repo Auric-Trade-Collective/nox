@@ -1,6 +1,7 @@
 package main
 
 import (
+	"YendisFish/nox/global"
 	"YendisFish/nox/logger"
 	"YendisFish/nox/webserver"
 	"os"
@@ -22,6 +23,7 @@ var CLI struct {
 
 	Install struct {} `help:"Install nox into your system and path" cmd:""`
 	Init struct {} `help:"Create a nox.toml file" cmd:""`
+	Debug bool `help:"Use debug mode" default:"false"`
 }
 
 func main() {
@@ -33,6 +35,11 @@ func main() {
 		},
 		kong.UsageOnError(),
 	)
+
+	if CLI.Debug {
+		logger.Write("Running in debug mode!")
+		global.Debug = true
+	}
 
 	switch ctx.Command() {
 	case "init": initNoxToml()
@@ -63,6 +70,9 @@ func main() {
 		if err := toml.Unmarshal(buff, &conf); err != nil {
 			logger.Panic("Failed to parse config file: " + err.Error())
 		}
+
+		logger.DebugJson(conf.Nox)
+		global.Env = conf.Nox.Env
 
 		cDir, err := os.Getwd()
 		if err != nil {

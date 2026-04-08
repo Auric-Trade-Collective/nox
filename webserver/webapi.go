@@ -1,4 +1,4 @@
-package webapi
+package webserver
 
 /*
 #cgo LDFLAGS: -ldl
@@ -7,6 +7,7 @@ package webapi
 */
 import "C"
 import (
+	"YendisFish/nox/global"
 	"YendisFish/nox/logger"
 	"YendisFish/nox/pages"
 	"io"
@@ -345,6 +346,22 @@ func CreateDelete(coll *C.NoxEndpointCollection, path *C.char, cb C.apiCallback)
 	C.CreateNoxEndpoint(coll, path, cb, 3)
 }
 
+//export GetEnv
+func GetEnv(secret *C.char, key *C.char) *C.char {
+	goNm := C.GoString(secret)
+	goTarget := C.GoString(key)
+
+	if try, ok := secrets[goNm][goTarget]; ok {
+		ret := C.CString(try);	
+		return ret
+	}
+
+	logger.Panic("One or more API modules are attempting to access environment variables that do not belong to them!")
+	return nil
+}
+
+var secrets = make(map[string]map[string]string)
+
 type NoxApi struct {
 	handle    []*C.NoxEndpointCollection
 	Endpoints map[string]map[string]unsafe.Pointer
@@ -399,6 +416,18 @@ func CreateApi(libpaths []string, authLib *string) (*NoxApi, error) {
 		if authLib != nil && *authLib == libpath && endp.auth != nil {
 			logger.Write("Registered auth function in file " + *authLib + " successfully!")
 			nox.Auth = endp.auth
+		}
+
+		if endp.name != nil && endp.secret != nil {
+			goNm := C.GoString(endp.name)	
+			goSec := C.GoString(endp.secret);
+			if try, ok := global.Env[goNm]; ok {
+				if _, ok := secrets[goSec]; ok {
+					logger.Panic("Collision error! Somehow generated two identical keys")
+				}
+				secrets[goSec] = make(map[string]string)
+				secrets[goSec] = try
+			}
 		}
 	}
 

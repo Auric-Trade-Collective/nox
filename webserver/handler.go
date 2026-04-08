@@ -3,7 +3,7 @@ package webserver
 import (
 	"YendisFish/nox/logger"
 	"YendisFish/nox/pages"
-	"YendisFish/nox/webapi"
+	// "YendisFish/nox/webapi"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -17,9 +17,11 @@ var SupportedHttpMethods = map[string]bool{
 	"DELETE": true,
 }
 
+var Handler *NoxHandler = nil
+
 type NoxHandler struct {
 	Root string
-	Api  *webapi.NoxApi
+	Api  *NoxApi
 	//eventually map the endpoints to some ABI functions
 	DirView interface{}
 }

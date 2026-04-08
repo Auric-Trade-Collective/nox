@@ -13,5 +13,6 @@ type Config struct {
 			Ciphers string `toml:"ciphers"`
 		} `toml:"tls"`
 		Dependencies map[string]string `toml:"dependencies"`
+		Env map[string]map[string]string `toml:"env"`
 	} `toml:"nox"`
 }
