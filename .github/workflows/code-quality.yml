@@ -10,6 +10,8 @@ on:
   pull_request:
     branches:
       - main
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -58,7 +60,7 @@ jobs:
         uses: golangci/golangci-lint-action@v7
         with:
           version: v2.11.4
-          args: --timeout=5m --out-format=line-number
+          args: --timeout=5m
           only-new-issues: true
 
   # ---------------------------------------------------------------------------
@@ -140,6 +142,7 @@ jobs:
             -a "${{ secrets.HORUSEC_API_TOKEN }}" \
             -u "https://horusec.aurictradecollective.org" \
             --log-level=info \
+            --disable-docker=true \
             -o json \
             -O /tmp/horusec-report.json \
             || true
