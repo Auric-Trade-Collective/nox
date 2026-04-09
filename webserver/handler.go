@@ -20,6 +20,10 @@ var SupportedHttpMethods = map[string]bool{
 
 var Handler *NoxHandler = nil
 
+func deleteMe() {
+	x := 42
+}
+
 type NoxHandler struct {
 	Root string
 	Api  *NoxApi
