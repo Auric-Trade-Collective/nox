@@ -55,7 +55,7 @@ jobs:
           cache: true
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
           version: v2.11.4
           args: --timeout=5m --out-format=line-number
@@ -125,6 +125,8 @@ jobs:
     name: Horusec Security Scan
     runs-on: ubuntu-latest
     if: always()
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -137,14 +139,16 @@ jobs:
             -p ./ \
             -a "${{ secrets.HORUSEC_API_TOKEN }}" \
             -u "https://horusec.aurictradecollective.org" \
-            --log-level=error \
-            --disable-docker=false \
+            --log-level=info \
             -o json \
-            -O horusec-report.json \
+            -O /tmp/horusec-report.json \
             || true
+          ls -la /tmp/horusec-report.json || echo "Report not generated"
 
       - name: Upload Horusec Report
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: horusec-report
-          path: horusec-report.json
+          path: /tmp/horusec-report.json
+          if-no-files-found: warn
