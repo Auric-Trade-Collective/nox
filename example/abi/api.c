@@ -1,10 +1,8 @@
 #include "../../include/nox.h"
 #include <stdio.h>
-#include <string.h>
-#include <time.h>
 
 void SomeCookie(HttpResponse *resp, HttpRequest *req) {
-    TrySetCookie(resp, "a", "abcd", "/", time(NULL) + (60 * 60 * 24), false, false);
+    TemporaryRedirect(resp, req, "https://google.com/");
 }
 
 int NoxAuth(HttpRequest *req) {

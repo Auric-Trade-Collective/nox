@@ -21,6 +21,42 @@ import (
 
 //c exports
 
+//export TemporaryRedirect
+func TemporaryRedirect(resp *C.HttpResponse, req *C.HttpRequest, location *C.char) {
+	gohandle := cgo.Handle(resp.gohandle)
+	wrt, ok := gohandle.Value().(http.ResponseWriter)
+	if !ok {
+		logger.Warn("Could not write to stream!")
+	}
+
+	gohandle2 := cgo.Handle(req.gohandle)
+	r, ok := gohandle2.Value().(*http.Request)
+	if !ok {
+		logger.Warn("Could not get request body!")
+	}
+
+	loc := C.GoString(location)
+	http.Redirect(wrt, r, loc, 302)
+}
+
+//export PermanentRedirect
+func PermanentRedirect(resp *C.HttpResponse, req *C.HttpRequest, location *C.char) {
+	gohandle := cgo.Handle(resp.gohandle)
+	wrt, ok := gohandle.Value().(http.ResponseWriter)
+	if !ok {
+		logger.Warn("Could not write to stream!")
+	}
+
+	gohandle2 := cgo.Handle(req.gohandle)
+	r, ok := gohandle2.Value().(*http.Request)
+	if !ok {
+		logger.Warn("Could not get request body!")
+	}
+
+	loc := C.GoString(location)
+	http.Redirect(wrt, r, loc, 301)
+}
+
 //export TryGetCookie
 func TryGetCookie(req *C.HttpRequest, key *C.char) *C.char {
 	gohandle := cgo.Handle(req.gohandle)

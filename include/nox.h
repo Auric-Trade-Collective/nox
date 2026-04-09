@@ -290,6 +290,9 @@ void LogPanic(char *name_space, char *msg);
 
 char *GetEnv(char *secret, char *key);
 
+void TemporaryRedirect(HttpResponse *resp, HttpRequest *req, char *loc);
+void PermanentRedirect(HttpResponse *resp, HttpRequest *req, char *loc);
+
 //PLUGINS
 
 typedef struct {
