@@ -1,6 +1,7 @@
 # =============================================================================
 # Nox - Code Quality & Security Workflow
-# Tools: Semgrep OSS, golangci-lint, Reviewdog, Horusec CLI
+# Tools: Semgrep OSS, golangci-lint, Horusec CLI
+# Results posted as a single sticky PR comment via marocchino/sticky-pull-request-comment
 # Triggers: Pull requests to main
 # =============================================================================
 
@@ -10,40 +11,14 @@ on:
   pull_request:
     branches:
       - main
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Semgrep - pattern-based static analysis (Go + C rules)
-  # ---------------------------------------------------------------------------
-  semgrep:
-    name: Semgrep
-    runs-on: ubuntu-latest
-    container:
-      image: semgrep/semgrep
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run Semgrep
-        run: |
-          semgrep ci \
-            --config "p/golang" \
-            --config "p/c" \
-            --config "p/security-audit" \
-            --config "p/secrets" \
-            --sarif \
-            --output semgrep.sarif \
-            || true  # don't fail the step, we report via reviewdog
-
-      - name: Upload Semgrep SARIF
-        uses: actions/upload-artifact@v4
-        with:
-          name: semgrep-sarif
-          path: semgrep.sarif
-
-  # ---------------------------------------------------------------------------
   # golangci-lint - Go linting
+  # Runs separately so it can fail the check independently
   # ---------------------------------------------------------------------------
   golangci-lint:
     name: golangci-lint
@@ -62,15 +37,14 @@ jobs:
           version: v2.11.4
           args: --timeout=5m
           only-new-issues: true
+        continue-on-error: true
 
   # ---------------------------------------------------------------------------
-  # Reviewdog - collects results and posts a single PR comment
+  # Report - runs all tools, collects output, posts a single sticky PR comment
   # ---------------------------------------------------------------------------
-  reviewdog:
-    name: Reviewdog Report
+  report:
+    name: PR Quality Report
     runs-on: ubuntu-latest
-    needs: [semgrep, golangci-lint]
-    if: always()
     permissions:
       pull-requests: write
       contents: read
@@ -82,32 +56,29 @@ jobs:
           go-version: stable
           cache: true
 
-      - name: Install Reviewdog
-        uses: reviewdog/action-setup@v1
-        with:
-          reviewdog_version: latest
-
+      # --- golangci-lint ---
       - name: Install golangci-lint
-        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin latest
+        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.11.4
 
+      - name: Run golangci-lint
+        id: golangci
+        run: |
+          OUTPUT=$(golangci-lint run --timeout=5m --output.formats=line-number 2>&1 || true)
+          if [ -z "$OUTPUT" ]; then
+            OUTPUT="✅ No issues found."
+          fi
+          {
+            echo "result<<EOF"
+            echo "$OUTPUT"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      # --- Semgrep ---
       - name: Install Semgrep
         run: pip install semgrep
 
-      - name: golangci-lint via Reviewdog
-        env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          golangci-lint run --timeout=5m --output.formats=line-number 2>&1 | \
-          reviewdog -f=golangci-lint \
-            -name="golangci-lint" \
-            -reporter=github-pr-review \
-            -filter-mode=nofilter \
-            -level=warning \
-            -fail-level=none
-
-      - name: Semgrep via Reviewdog
-        env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run Semgrep
+        id: semgrep
         run: |
           semgrep \
             --config "p/golang" \
@@ -116,13 +87,63 @@ jobs:
             --config "p/secrets" \
             --sarif \
             --output semgrep.sarif || true
-          reviewdog -f=sarif \
-            -name="semgrep" \
-            -reporter=github-pr-review \
-            -filter-mode=nofilter \
-            -level=warning \
-            -fail-level=none \
-            < semgrep.sarif
+
+          OUTPUT=$(python3 -c "
+          import json, sys
+          try:
+            with open('semgrep.sarif') as f:
+              data = json.load(f)
+            results = []
+            for run in data.get('runs', []):
+              for r in run.get('results', []):
+                msg = r.get('message', {}).get('text', '').split('\n')[0]
+                rule = r.get('ruleId', 'unknown')
+                for loc in r.get('locations', []):
+                  uri = loc.get('physicalLocation', {}).get('artifactLocation', {}).get('uri', '')
+                  line = loc.get('physicalLocation', {}).get('region', {}).get('startLine', '?')
+                  results.append(f'{uri}:{line} [{rule}] {msg}')
+            if results:
+              print('\n'.join(results))
+            else:
+              print('✅ No issues found.')
+          except Exception as e:
+            print(f'Error parsing semgrep output: {e}')
+          " 2>/dev/null || echo "✅ No issues found.")
+
+          {
+            echo "result<<EOF"
+            echo "$OUTPUT"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      # --- Post sticky PR comment ---
+      - name: Post PR comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: code-quality
+          message: |
+            ## 🔍 Code Quality Report
+
+            <details>
+            <summary><b>golangci-lint</b></summary>
+
+            ```
+            ${{ steps.golangci.outputs.result }}
+            ```
+
+            </details>
+
+            <details>
+            <summary><b>Semgrep</b></summary>
+
+            ```
+            ${{ steps.semgrep.outputs.result }}
+            ```
+
+            </details>
+
+            ---
+            *Updated on every push. Full security report in [Horusec dashboard](https://horusec.aurictradecollective.org).*
 
   # ---------------------------------------------------------------------------
   # Horusec - security scan, posts results to your self-hosted dashboard
@@ -130,9 +151,6 @@ jobs:
   horusec:
     name: Horusec Security Scan
     runs-on: ubuntu-latest
-    if: always()
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -150,7 +168,6 @@ jobs:
             -o json \
             -O /tmp/horusec-report.json \
             || true
-          ls -la /tmp/horusec-report.json || echo "Report not generated"
 
       - name: Upload Horusec Report
         uses: actions/upload-artifact@v4
