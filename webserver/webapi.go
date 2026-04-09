@@ -357,6 +357,8 @@ func GetEnv(secret *C.char, key *C.char) *C.char {
 	}
 
 	logger.Error("Could not find requested environment variable: " + goTarget)
+	logger.Debug("Error DBG: ")
+	logger.Debug("    Secret: " + goNm)
 	return nil
 }
 
@@ -421,6 +423,9 @@ func CreateApi(libpaths []string, authLib *string) (*NoxApi, error) {
 		if endp.name != nil && endp.secret != nil {
 			goNm := C.GoString(endp.name)	
 			goSec := C.GoString(endp.secret);
+
+			logger.Debug("Secret registered: " + goSec)
+
 			if try, ok := global.Env[goNm]; ok {
 				if _, ok := secrets[goSec]; ok {
 					logger.Panic("Collision error! Somehow generated two identical keys")

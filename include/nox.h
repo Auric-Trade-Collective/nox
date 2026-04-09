@@ -156,7 +156,7 @@ static inline void generate_secure_string(char *buffer, size_t length) {
 }
 
 static inline char *RegisterName(NoxEndpointCollection *coll, char *name) {
-    char *secure;
+    char *secure = (char *)malloc(16);
     generate_secure_string(secure, 16);
 
     char *duped = strdup(name);
