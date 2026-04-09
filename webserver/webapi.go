@@ -356,7 +356,7 @@ func GetEnv(secret *C.char, key *C.char) *C.char {
 		return ret
 	}
 
-	logger.Panic("One or more API modules are attempting to access environment variables that do not belong to them!")
+	logger.Error("Could not find requested environment variable: " + goTarget)
 	return nil
 }
 
