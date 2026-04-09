@@ -1,7 +1,6 @@
 # =============================================================================
 # Nox - Code Quality & Security Workflow
-# Tools: Semgrep OSS, golangci-lint, Horusec CLI
-# Results posted as a single sticky PR comment via marocchino/sticky-pull-request-comment
+# Tools: Semgrep OSS, golangci-lint, Reviewdog, Horusec CLI
 # Triggers: Pull requests to main
 # =============================================================================
 
@@ -17,8 +16,7 @@ env:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # golangci-lint - Go linting
-  # Runs separately so it can fail the check independently
+  # golangci-lint - standalone check so it appears as its own PR status
   # ---------------------------------------------------------------------------
   golangci-lint:
     name: golangci-lint
@@ -40,7 +38,7 @@ jobs:
         continue-on-error: true
 
   # ---------------------------------------------------------------------------
-  # Report - runs all tools, collects output, posts a single sticky PR comment
+  # Report - inline annotations via reviewdog + sticky summary PR comment
   # ---------------------------------------------------------------------------
   report:
     name: PR Quality Report
@@ -48,6 +46,7 @@ jobs:
     permissions:
       pull-requests: write
       contents: read
+      checks: write
     steps:
       - uses: actions/checkout@v4
 
@@ -56,29 +55,31 @@ jobs:
           go-version: stable
           cache: true
 
-      # --- golangci-lint ---
       - name: Install golangci-lint
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.11.4
 
-      - name: Run golangci-lint
-        id: golangci
-        run: |
-          OUTPUT=$(golangci-lint run --timeout=5m --output.formats=line-number 2>&1 || true)
-          if [ -z "$OUTPUT" ]; then
-            OUTPUT="✅ No issues found."
-          fi
-          {
-            echo "result<<EOF"
-            echo "$OUTPUT"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
-
-      # --- Semgrep ---
       - name: Install Semgrep
         run: pip install semgrep
 
-      - name: Run Semgrep
-        id: semgrep
+      - name: Install Reviewdog
+        uses: reviewdog/action-setup@v1
+        with:
+          reviewdog_version: latest
+
+      # Inline annotations in Files Changed tab via github-check
+      - name: golangci-lint inline annotations
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          golangci-lint run --timeout=5m --output.formats=line-number 2>&1 | \
+          reviewdog -f=golangci-lint \
+            -name="golangci-lint" \
+            -reporter=github-check \
+            -filter-mode=added \
+            -level=warning \
+            -fail-level=none || true
+
+      - name: Run Semgrep and save SARIF
         run: |
           semgrep \
             --config "p/golang" \
@@ -88,44 +89,93 @@ jobs:
             --sarif \
             --output semgrep.sarif || true
 
-          OUTPUT=$(python3 -c "
-          import json, sys
-          try:
-            with open('semgrep.sarif') as f:
-              data = json.load(f)
-            results = []
-            for run in data.get('runs', []):
-              for r in run.get('results', []):
-                msg = r.get('message', {}).get('text', '').split('\n')[0]
-                rule = r.get('ruleId', 'unknown')
-                for loc in r.get('locations', []):
-                  uri = loc.get('physicalLocation', {}).get('artifactLocation', {}).get('uri', '')
-                  line = loc.get('physicalLocation', {}).get('region', {}).get('startLine', '?')
-                  results.append(f'{uri}:{line} [{rule}] {msg}')
-            if results:
-              print('\n'.join(results))
-            else:
-              print('✅ No issues found.')
-          except Exception as e:
-            print(f'Error parsing semgrep output: {e}')
-          " 2>/dev/null || echo "✅ No issues found.")
+      - name: Semgrep inline annotations
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          reviewdog -f=sarif \
+            -name="semgrep" \
+            -reporter=github-check \
+            -filter-mode=added \
+            -level=warning \
+            -fail-level=none \
+            < semgrep.sarif || true
 
+      # Capture golangci-lint output for summary comment
+      - name: Capture golangci-lint output
+        id: golangci
+        run: |
+          OUTPUT=$(golangci-lint run --timeout=5m 2>&1 || true)
+          if [ -z "$OUTPUT" ]; then
+            OUTPUT="✅ No issues found."
+          fi
           {
             echo "result<<EOF"
             echo "$OUTPUT"
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
-      # --- Post sticky PR comment ---
-      - name: Post PR comment
+      # Parse Semgrep SARIF into a markdown table with GitHub file links
+      - name: Parse Semgrep for summary
+        id: semgrep
+        run: |
+          SHA="${{ github.event.pull_request.head.sha }}"
+          REPO="${{ github.repository }}"
+
+          OUTPUT=$(python3 << 'PYEOF'
+          import json, os
+
+          sha = os.environ.get('SHA', '')
+          repo = os.environ.get('REPO', '')
+          base_url = f"https://github.com/{repo}/blob/{sha}"
+
+          try:
+            with open('semgrep.sarif') as f:
+              data = json.load(f)
+            rows = []
+            for run in data.get('runs', []):
+              for r in run.get('results', []):
+                msg = r.get('message', {}).get('text', '').split('\n')[0][:100]
+                rule = r.get('ruleId', 'unknown')
+                sev = r.get('level', 'warning').upper()
+                for loc in r.get('locations', []):
+                  uri = loc.get('physicalLocation', {}).get('artifactLocation', {}).get('uri', '')
+                  line = loc.get('physicalLocation', {}).get('region', {}).get('startLine', 1)
+                  link = f"[{uri}:{line}]({base_url}/{uri}#L{line})"
+                  rows.append(f"| {sev} | {link} | `{rule}` | {msg} |")
+            if rows:
+              print("| Severity | Location | Rule | Message |")
+              print("|----------|----------|------|---------|")
+              for row in rows:
+                print(row)
+            else:
+              print("✅ No issues found.")
+          except Exception as e:
+            print(f"Error parsing semgrep output: {e}")
+          PYEOF
+          )
+
+          {
+            echo "result<<EOF"
+            echo "$OUTPUT"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+        env:
+          SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
+
+      # Sticky summary comment — updates on every push, never duplicates
+      - name: Post sticky summary comment
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: code-quality
           message: |
             ## 🔍 Code Quality Report
 
-            <details>
-            <summary><b>golangci-lint</b></summary>
+            > 💡 Inline annotations are also visible in the **Checks** tab and **Files changed** tab.
+
+            <details open>
+            <summary><b>🔧 golangci-lint</b></summary>
 
             ```
             ${{ steps.golangci.outputs.result }}
@@ -133,20 +183,19 @@ jobs:
 
             </details>
 
-            <details>
-            <summary><b>Semgrep</b></summary>
+            <details open>
+            <summary><b>🔎 Semgrep</b></summary>
 
-            ```
             ${{ steps.semgrep.outputs.result }}
-            ```
 
             </details>
 
             ---
-            *Updated on every push. Full security report in [Horusec dashboard](https://horusec.aurictradecollective.org).*
+            *Updated on every push · [Horusec Dashboard](https://horusec.aurictradecollective.org)*
 
   # ---------------------------------------------------------------------------
-  # Horusec - security scan, posts results to your self-hosted dashboard
+  # Horusec - SAST with Docker, sends results to self-hosted dashboard
+  # Note: uses direct IP:port to bypass nginx path rewriting
   # ---------------------------------------------------------------------------
   horusec:
     name: Horusec Security Scan
@@ -162,9 +211,8 @@ jobs:
           horusec start \
             -p ./ \
             -a "${{ secrets.HORUSEC_API_TOKEN }}" \
-            -u "https://horusec.aurictradecollective.org" \
+            -u "http://135.125.254.33:8000" \
             --log-level=info \
-            --disable-docker=true \
             -o json \
             -O /tmp/horusec-report.json \
             || true
@@ -176,3 +224,4 @@ jobs:
           name: horusec-report
           path: /tmp/horusec-report.json
           if-no-files-found: warn
+          
