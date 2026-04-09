@@ -23,24 +23,29 @@ var tty bool = (func() bool {
 
 func Write(msg string) {
 	temper.Info(msg)
+	os.Stdout.Sync()
 }
 
 func Error(msg string) {
 	temper.Error(msg)
+	os.Stdout.Sync()
 }
 
 func Warn(msg string) {
 	temper.Warn(msg)	
+	os.Stdout.Sync()
 }
 
 func Panic(msg string) {
 	temper.Error(msg)
+	os.Stdout.Sync()
 	os.Exit(-1)
 }
 
 func Debug(msg string) {
 	if global.Debug {
 		temper.Custom([]string{"Debug", msg}, temper.Magenta)
+		os.Stdout.Sync()
 	}
 }
 
@@ -104,4 +109,13 @@ func LogPanic(namespace *C.char, msg *C.char) {
 
 	out := "[" + goNamespace + "] " + goMsg
 	Panic(out)
+}
+
+//export LogDebug
+func LogDebug(namespace *C.char, msg *C.char) {
+	goNamespace := C.GoString(namespace)
+	goMsg := C.GoString(msg)
+
+	out := "[" + goNamespace + "] " + goMsg
+	Debug(out)
 }

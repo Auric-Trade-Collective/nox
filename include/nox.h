@@ -287,6 +287,7 @@ void LogWrite(char *name_space, char *msg);
 void LogWarn(char *name_space, char *msg);
 void LogError(char *name_space, char *msg);
 void LogPanic(char *name_space, char *msg);
+void LogDebug(char *name_space, char *msg);
 
 char *GetEnv(char *secret, char *key);
 

@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 void SomeCookie(HttpResponse *resp, HttpRequest *req) {
+    LogDebug("Nox API", "Redirecting this cool dude!");
     TemporaryRedirect(resp, req, "https://google.com/");
 }
 
