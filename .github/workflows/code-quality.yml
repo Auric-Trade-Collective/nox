@@ -1,0 +1,150 @@
+# =============================================================================
+# Nox - Code Quality & Security Workflow
+# Tools: Semgrep OSS, golangci-lint, Reviewdog, Horusec CLI
+# Triggers: Pull requests to main
+# =============================================================================
+
+name: Code Quality & Security
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Semgrep - pattern-based static analysis (Go + C rules)
+  # ---------------------------------------------------------------------------
+  semgrep:
+    name: Semgrep
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        run: |
+          semgrep ci \
+            --config "p/golang" \
+            --config "p/c" \
+            --config "p/security-audit" \
+            --config "p/secrets" \
+            --sarif \
+            --output semgrep.sarif \
+            || true  # don't fail the step, we report via reviewdog
+
+      - name: Upload Semgrep SARIF
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-sarif
+          path: semgrep.sarif
+
+  # ---------------------------------------------------------------------------
+  # golangci-lint - Go linting
+  # ---------------------------------------------------------------------------
+  golangci-lint:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m --out-format=line-number
+          only-new-issues: true
+
+  # ---------------------------------------------------------------------------
+  # Reviewdog - collects results and posts a single PR comment
+  # ---------------------------------------------------------------------------
+  reviewdog:
+    name: Reviewdog Report
+    runs-on: ubuntu-latest
+    needs: [semgrep, golangci-lint]
+    if: always()
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Install Reviewdog
+        uses: reviewdog/action-setup@v1
+        with:
+          reviewdog_version: latest
+
+      - name: Install golangci-lint
+        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin latest
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Run golangci-lint via Reviewdog
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          golangci-lint run --out-format=line-number --timeout=5m 2>&1 | \
+          reviewdog -f=golangci-lint \
+            -name="golangci-lint" \
+            -reporter=github-pr-review \
+            -filter-mode=added \
+            -fail-on-error=false
+
+      - name: Run Semgrep via Reviewdog
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          semgrep \
+            --config "p/golang" \
+            --config "p/c" \
+            --config "p/security-audit" \
+            --config "p/secrets" \
+            --json 2>/dev/null | \
+          reviewdog -f=sarif \
+            -name="semgrep" \
+            -reporter=github-pr-review \
+            -filter-mode=added \
+            -fail-on-error=false
+
+  # ---------------------------------------------------------------------------
+  # Horusec - security scan, posts results to your self-hosted dashboard
+  # ---------------------------------------------------------------------------
+  horusec:
+    name: Horusec Security Scan
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Horusec
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/ZupIT/horusec/main/deployments/scripts/install.sh | bash -s latest
+          horusec start \
+            -p ./ \
+            -a "${{ secrets.HORUSEC_API_TOKEN }}" \
+            -u "https://horusec.aurictradecollective.org" \
+            --log-level=error \
+            --disable-docker=false \
+            -o json \
+            -O horusec-report.json \
+            || true
+
+      - name: Upload Horusec Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: horusec-report
+          path: horusec-report.json
