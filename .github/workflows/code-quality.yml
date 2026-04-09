@@ -101,7 +101,7 @@ jobs:
           reviewdog -f=golangci-lint \
             -name="golangci-lint" \
             -reporter=github-pr-review \
-            -filter-mode=added \
+            -filter-mode=nofilter \
             -level=warning \
             -fail-level=none
 
@@ -114,13 +114,15 @@ jobs:
             --config "p/c" \
             --config "p/security-audit" \
             --config "p/secrets" \
-            --sarif | \
+            --sarif \
+            --output semgrep.sarif || true
           reviewdog -f=sarif \
             -name="semgrep" \
             -reporter=github-pr-review \
-            -filter-mode=added \
+            -filter-mode=nofilter \
             -level=warning \
-            -fail-level=none
+            -fail-level=none \
+            < semgrep.sarif
 
   # ---------------------------------------------------------------------------
   # Horusec - security scan, posts results to your self-hosted dashboard
