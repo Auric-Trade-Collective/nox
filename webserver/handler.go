@@ -27,6 +27,10 @@ type NoxHandler struct {
 	DirView interface{}
 }
 
+func deleteMe() {
+	x := 42
+}
+
 func (h *NoxHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if h.Root == "" {
 		if h.Api != nil {
