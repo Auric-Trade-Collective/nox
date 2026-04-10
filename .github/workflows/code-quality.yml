@@ -1,6 +1,6 @@
 # =============================================================================
 # Nox - Code Quality & Security Workflow
-# Tools: Semgrep OSS, golangci-lint, Reviewdog, Horusec CLI
+# Tools: Semgrep OSS, golangci-lint, Reviewdog
 # Triggers: Pull requests to main
 # =============================================================================
 
@@ -10,13 +10,16 @@ on:
   pull_request:
     branches:
       - main
+  push:
+    branches:
+      - main
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # ---------------------------------------------------------------------------
-  # golangci-lint - standalone check so it appears as its own PR status
+  # golangci-lint - standalone check, appears as its own PR status
   # ---------------------------------------------------------------------------
   golangci-lint:
     name: golangci-lint
@@ -37,7 +40,7 @@ jobs:
           only-new-issues: true
 
   # ---------------------------------------------------------------------------
-  # Report - inline annotations via reviewdog + sticky summary PR comment
+  # Report - inline annotations via Reviewdog + sticky summary PR comment
   # ---------------------------------------------------------------------------
   report:
     name: PR Quality Report
@@ -65,8 +68,8 @@ jobs:
         with:
           reviewdog_version: latest
 
-      # Inline annotations in Files Changed tab via github-check
-      - name: golangci-lint inline annotations
+      # Inline annotations in Checks tab and Files changed tab
+      - name: golangci-lint annotations
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -78,7 +81,7 @@ jobs:
             -level=warning \
             -fail-level=none || true
 
-      - name: Run Semgrep and save SARIF
+      - name: Run Semgrep
         run: |
           semgrep \
             --config "p/golang" \
@@ -88,7 +91,7 @@ jobs:
             --sarif \
             --output semgrep.sarif || true
 
-      - name: Semgrep inline annotations
+      - name: Semgrep annotations
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -114,13 +117,13 @@ jobs:
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
-      # Parse Semgrep SARIF into a markdown table with GitHub file links
-      - name: Parse Semgrep for summary
+      # Parse Semgrep SARIF into a markdown table with clickable file links
+      - name: Parse Semgrep output
         id: semgrep
+        env:
+          SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
         run: |
-          SHA="${{ github.event.pull_request.head.sha }}"
-          REPO="${{ github.repository }}"
-
           OUTPUT=$(python3 << 'PYEOF'
           import json, os
 
@@ -153,18 +156,14 @@ jobs:
             print(f"Error parsing semgrep output: {e}")
           PYEOF
           )
-
           {
             echo "result<<EOF"
             echo "$OUTPUT"
             echo "EOF"
           } >> $GITHUB_OUTPUT
-        env:
-          SHA: ${{ github.event.pull_request.head.sha }}
-          REPO: ${{ github.repository }}
 
-      # Sticky summary comment — updates on every push, never duplicates
-      - name: Post sticky summary comment
+      # Sticky PR comment — updates on every push, never duplicates
+      - name: Post summary comment
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: code-quality
@@ -173,7 +172,7 @@ jobs:
 
             > 💡 Inline annotations are also visible in the **Checks** tab and **Files changed** tab.
 
-            <details open>
+            <details>
             <summary><b>🔧 golangci-lint</b></summary>
 
             ```
@@ -182,7 +181,7 @@ jobs:
 
             </details>
 
-            <details open>
+            <details>
             <summary><b>🔎 Semgrep</b></summary>
 
             ${{ steps.semgrep.outputs.result }}
@@ -190,40 +189,4 @@ jobs:
             </details>
 
             ---
-            *Updated on every push · [Horusec Dashboard](https://horusec.aurictradecollective.org)*
-
-  # ---------------------------------------------------------------------------
-  # Horusec - SAST with Docker, sends results to self-hosted dashboard
-  # Note: uses direct IP:port to bypass nginx path rewriting
-  # ---------------------------------------------------------------------------
-  horusec:
-    name: Horusec Security Scan
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run Horusec
-        run: |
-          docker run --rm \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -v $(pwd):/src \
-            horuszup/horusec-cli:latest \
-            horusec start \
-              -p /src \
-              -P $(pwd) \
-              -a "${{ secrets.HORUSEC_API_TOKEN }}" \
-              -u "http://135.125.254.33:8000" \
-              --log-level=info \
-              -o json \
-              -O /tmp/horusec-report.json \
-            || true
-
-      - name: Upload Horusec Report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: horusec-report
-          path: /tmp/horusec-report.json
-          if-no-files-found: warn
+            *Updated on every push · Security dashboard coming with Gitea migration*
