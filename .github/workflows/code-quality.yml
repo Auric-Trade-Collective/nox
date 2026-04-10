@@ -137,7 +137,7 @@ jobs:
             rows = []
             for run in data.get('runs', []):
               for r in run.get('results', []):
-                msg = r.get('message', {}).get('text', '').split('\n')[0][:100]
+                msg = r.get('message', {}).get('text', '').split('\n')[0][:200]
                 rule = r.get('ruleId', 'unknown')
                 sev = r.get('level', 'warning').upper()
                 for loc in r.get('locations', []):
@@ -172,7 +172,7 @@ jobs:
 
             > 💡 Inline annotations are also visible in the **Checks** tab and **Files changed** tab.
 
-            <details>
+            <details open>
             <summary><b>🔧 golangci-lint</b></summary>
 
             ```
@@ -181,7 +181,7 @@ jobs:
 
             </details>
 
-            <details>
+            <details open>
             <summary><b>🔎 Semgrep</b></summary>
 
             ${{ steps.semgrep.outputs.result }}
