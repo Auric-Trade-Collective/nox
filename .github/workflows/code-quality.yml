@@ -1,7 +1,7 @@
 # =============================================================================
 # Nox - Code Quality & Security Workflow
 # Tools: Semgrep OSS, golangci-lint, Reviewdog
-# Triggers: Pull requests to main
+# Triggers: Pull requests to main + push to main (for branch protection)
 # =============================================================================
 
 name: Code Quality & Security
@@ -45,6 +45,7 @@ jobs:
   report:
     name: PR Quality Report
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     permissions:
       pull-requests: write
       contents: read
@@ -117,7 +118,7 @@ jobs:
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
-      # Parse Semgrep SARIF into a markdown table with clickable file links
+      # Parse Semgrep SARIF into a readable list with full messages
       - name: Parse Semgrep output
         id: semgrep
         env:
@@ -134,22 +135,22 @@ jobs:
           try:
             with open('semgrep.sarif') as f:
               data = json.load(f)
-            rows = []
+            findings = []
             for run in data.get('runs', []):
               for r in run.get('results', []):
-                msg = r.get('message', {}).get('text', '').split('\n')[0][:200]
+                msg = r.get('message', {}).get('text', '').strip()
                 rule = r.get('ruleId', 'unknown')
                 sev = r.get('level', 'warning').upper()
                 for loc in r.get('locations', []):
                   uri = loc.get('physicalLocation', {}).get('artifactLocation', {}).get('uri', '')
                   line = loc.get('physicalLocation', {}).get('region', {}).get('startLine', 1)
                   link = f"[{uri}:{line}]({base_url}/{uri}#L{line})"
-                  rows.append(f"| {sev} | {link} | `{rule}` | {msg} |")
-            if rows:
-              print("| Severity | Location | Rule | Message |")
-              print("|----------|----------|------|---------|")
-              for row in rows:
-                print(row)
+                  findings.append((sev, link, rule, msg))
+            if findings:
+              for sev, link, rule, msg in findings:
+                print(f"**{sev}** {link} `{rule}`")
+                print(f"> {msg}")
+                print("")
             else:
               print("✅ No issues found.")
           except Exception as e:
