@@ -206,16 +206,18 @@ jobs:
 
       - name: Run Horusec
         run: |
-          curl -fsSL https://raw.githubusercontent.com/ZupIT/horusec/main/deployments/scripts/install.sh | bash -s latest
-          docker info  # verify docker is available
-          horusec start \
-            -p ./ \
-            -P ./ \
-            -a "${{ secrets.HORUSEC_API_TOKEN }}" \
-            -u "http://135.125.254.33:8000" \
-            --log-level=info \
-            -o json \
-            -O /tmp/horusec-report.json \
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v $(pwd):/src \
+            horuszup/horusec-cli:latest \
+            horusec start \
+              -p /src \
+              -P $(pwd) \
+              -a "${{ secrets.HORUSEC_API_TOKEN }}" \
+              -u "http://135.125.254.33:8000" \
+              --log-level=info \
+              -o json \
+              -O /tmp/horusec-report.json \
             || true
 
       - name: Upload Horusec Report
