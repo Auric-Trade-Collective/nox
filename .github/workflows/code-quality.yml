@@ -55,7 +55,7 @@ jobs:
           tidy-checks: '-*,bugprone-*,cert-*,clang-analyzer-*,portability-*'
           files-changed-only: false
           extra-args: '-I/usr/include/python3.12 -Iinclude -I.'
-          ignore: 'test|old_noxpy.c'
+          ignore: 'changelog'
 
   # ---------------------------------------------------------------------------
   # Report - inline annotations via Reviewdog + sticky summary PR comment
