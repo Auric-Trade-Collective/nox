@@ -1,6 +1,6 @@
 # =============================================================================
 # Nox - Code Quality & Security Workflow
-# Tools: Semgrep OSS, golangci-lint, Reviewdog
+# Tools: Semgrep OSS, golangci-lint, cpp-linter (clang-tidy), Reviewdog
 # Triggers: Pull requests to main + push to main (for branch protection)
 # =============================================================================
 
@@ -38,6 +38,27 @@ jobs:
           version: v2.11.4
           args: --timeout=5m
           only-new-issues: true
+
+  # ---------------------------------------------------------------------------
+  # clang-tidy - C static analysis via cpp-linter-action
+  # ---------------------------------------------------------------------------
+  clang-tidy:
+    name: clang-tidy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cpp-linter/cpp-linter-action@v2
+        id: linter
+        with:
+          style: ''
+          tidy-checks: '-*,bugprone-*,cert-*,clang-analyzer-*,portability-*'
+          files-changed-only: false
+          extra-args: >-
+            -I/usr/include/python3.12
+            -Isrc/include
+            -I.
+          ignore: 'test|old_noxpy.c'
 
   # ---------------------------------------------------------------------------
   # Report - inline annotations via Reviewdog + sticky summary PR comment
@@ -81,6 +102,23 @@ jobs:
             -filter-mode=added \
             -level=warning \
             -fail-level=none || true
+
+      # clang-tidy - posts its own native PR thread comment with all findings
+      - uses: cpp-linter/cpp-linter-action@v2
+        id: linter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          style: ''
+          tidy-checks: '-*,bugprone-*,cert-*,clang-analyzer-*,portability-*'
+          files-changed-only: true
+          extra-args: >-
+            -I/usr/include/python3.12
+            -Isrc/include
+            -I.
+          ignore: 'test|old_noxpy.c'
+          thread-comments: update
+          file-annotations: true
 
       - name: Run Semgrep
         run: |
@@ -164,6 +202,7 @@ jobs:
           } >> $GITHUB_OUTPUT
 
       # Sticky PR comment — updates on every push, never duplicates
+      # (clang-tidy posts its own separate comment via thread-comments: update)
       - name: Post summary comment
         uses: marocchino/sticky-pull-request-comment@v2
         with:
