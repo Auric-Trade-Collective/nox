@@ -54,10 +54,7 @@ jobs:
           style: ''
           tidy-checks: '-*,bugprone-*,cert-*,clang-analyzer-*,portability-*'
           files-changed-only: false
-          extra-args: >-
-            -I/usr/include/python3.12
-            -Isrc/include
-            -I.
+          extra-args: '-I/usr/include/python3.12 -Iinclude -I.'
           ignore: 'test|old_noxpy.c'
 
   # ---------------------------------------------------------------------------
@@ -112,10 +109,7 @@ jobs:
           style: ''
           tidy-checks: '-*,bugprone-*,cert-*,clang-analyzer-*,portability-*'
           files-changed-only: true
-          extra-args: >-
-            -I/usr/include/python3.12
-            -Isrc/include
-            -I.
+          extra-args: '-I/usr/include/python3.12 -Iinclude -I.'
           ignore: 'test|old_noxpy.c'
           thread-comments: update
           file-annotations: true
