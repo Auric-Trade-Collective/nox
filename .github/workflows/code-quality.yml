@@ -205,12 +205,12 @@ jobs:
           fetch-depth: 0
 
       - name: Run Horusec
-        env:
-          DOCKER_HOST: unix:///var/run/docker.sock
         run: |
           curl -fsSL https://raw.githubusercontent.com/ZupIT/horusec/main/deployments/scripts/install.sh | bash -s latest
+          docker info  # verify docker is available
           horusec start \
             -p ./ \
+            -P ./ \
             -a "${{ secrets.HORUSEC_API_TOKEN }}" \
             -u "http://135.125.254.33:8000" \
             --log-level=info \
