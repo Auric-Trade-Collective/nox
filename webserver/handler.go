@@ -28,7 +28,7 @@ type NoxHandler struct {
 }
 
 func deleteMe() {
-	x := 42
+	xyz := 42
 }
 
 func (h *NoxHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
