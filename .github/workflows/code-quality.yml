@@ -35,7 +35,6 @@ jobs:
           version: v2.11.4
           args: --timeout=5m
           only-new-issues: true
-        continue-on-error: true
 
   # ---------------------------------------------------------------------------
   # Report - inline annotations via reviewdog + sticky summary PR comment
@@ -206,6 +205,8 @@ jobs:
           fetch-depth: 0
 
       - name: Run Horusec
+        env:
+          DOCKER_HOST: unix:///var/run/docker.sock
         run: |
           curl -fsSL https://raw.githubusercontent.com/ZupIT/horusec/main/deployments/scripts/install.sh | bash -s latest
           horusec start \
@@ -224,4 +225,3 @@ jobs:
           name: horusec-report
           path: /tmp/horusec-report.json
           if-no-files-found: warn
-          
