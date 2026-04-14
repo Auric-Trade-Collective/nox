@@ -16,5 +16,7 @@ void CreateNoxApi(NoxEndpointCollection *coll) {
     CreateAuth(coll, NoxAuth);
     CreateGet(coll, "/foo", SomeCookie);
 
+    RegisterName(coll, "test");
+
     LogWrite("Nox API", "Okay we can log from here!");
 }

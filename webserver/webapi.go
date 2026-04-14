@@ -517,8 +517,16 @@ func (api *NoxApi) ExecuteEndpoint(path string, resp http.ResponseWriter, req *h
 		remoteAddr: remoteAddr,
 	}
 
+	if _, ok := api.Endpoints[path][req.Method]; !ok {
+		logger.Error("Could not find requested endpoint [" + req.Method + "] " + path)
+		resp.WriteHeader(http.StatusNotFound)
+		resp.Write([]byte(pages.Pg404))
+		return
+	}
+
 	if api.Authenticate(cReq) {
 		C.InvokeApiCallback((*[0]byte)(api.Endpoints[path][req.Method]), cResp, cReq)
+		logger.Write("[" + req.Method + "] " + req.URL.Path + " called by " + req.RemoteAddr)
 	} else {
 		resp.WriteHeader(http.StatusUnauthorized)
 		resp.Write([]byte(pages.Pg401))
