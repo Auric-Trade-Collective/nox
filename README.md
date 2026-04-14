@@ -1,32 +1,38 @@
 # Nox
 Nox is a general purpose webserver written in Go. Providing
-robust and simple ways for you to make your webapps come to
-life, nox aims to live up to Nginx/Apache in a modern and 
-complete way.
+robust and simple ways for you to host your websites and web 
+APIs, Nox is a powerful replacement to tools like Caddy, Nginx, 
+or Apache.
 
-Features include:
-- Serving directories and files
-- Hosting APIs
-- Using TLS
-- Hosting quick and large scale web projects
+**Supported Platforms**
+- Linux: Nox has complete and first class support for Linux, all
+testing and development happens natively for it.
+- MacOS: Nox reasonably has support for MacOS, there's no testing
+or builds officially made for it, but as of now nox is known to build
+and run on MacOS.
+- Windows: There is no Nox support for Windows. Furthermore, Nox
+not plan to add support for Windows. The best way to run Nox if
+you are on a Windows machine is to use WSL.
 
 # How to Build
-Pull the current repository, and run ``go build``!
+Pull the current repository, and run ``go build``! You notably
+will need gcc installed.
 
 # How to Run
-Since nox is in alpha versions, there will be many changes to
-its configuration, however currently it needs a directory and
-configuration file to run. Simply create a TOML file by running
-`nox init` in a directory.
+Simply create a TOML file by running `nox init` in a directory.
 
-After this, you can run nox in the current directory, and it
+After this, you can run nox in the current directory, it
 will read your config and run the server when you run `nox spin`!
 
 # Building an API
-Right now Nox supports C first class through the native/webapi.h
-file. But there are also official Python and Golang SDKs for the
-native ABI.
+Nox has support for hosting APIs, this is done through a native
+ABI.
 
-- https://github.com/Auric-Trade-Collective/nox-go
+Right now Nox supports C first class through the include/nox.h
+file. But there are also official SDKs for other languages that
+wrap the ABI.
+
+- https://github.com/Auric-Trade-Collective/nox-d
+- https://github.com/Auric-Trade-Collective/nox-go [Discontinued]
 - https://github.com/Auric-Trade-Collective/nox-py
 - Flux wrapper coming!
