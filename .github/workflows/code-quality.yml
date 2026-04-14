@@ -2,6 +2,10 @@
 # Nox - Code Quality & Security Workflow
 # Tools: Semgrep OSS, golangci-lint, cpp-linter (clang-tidy), Reviewdog
 # Triggers: Pull requests to main + push to main (for branch protection)
+#
+# Design: Each linter runs ONCE in its own job (so it shows as a PR status
+# check). Output is uploaded as an artifact. The `report` job downloads the
+# artifacts and posts inline annotations + a sticky summary comment.
 # =============================================================================
 
 name: Code Quality & Security
@@ -17,9 +21,9 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-jobs:      
+jobs:
   # ---------------------------------------------------------------------------
-  # golangci-lint - standalone check, appears as its own PR status
+  # golangci-lint - runs once, uploads output for the report job
   # ---------------------------------------------------------------------------
   golangci-lint:
     name: golangci-lint
@@ -32,15 +36,36 @@ jobs:
           go-version: stable
           cache: true
 
+      - name: Install golangci-lint
+        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.11.4
+
+      # Run once, capture output in both formats we need.
+      # `tee` keeps the output visible in the job log while also saving to files.
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v7
+        id: run
+        run: |
+          set +e
+          golangci-lint run --timeout=5m --output.formats=line-number 2>&1 | tee golangci-lint.line-number.txt
+          EXIT=${PIPESTATUS[0]}
+          # Also produce a human-readable copy for the summary comment
+          cp golangci-lint.line-number.txt golangci-lint.txt
+          if [ ! -s golangci-lint.txt ]; then
+            echo "✅ No issues found." > golangci-lint.txt
+          fi
+          exit $EXIT
+
+      - name: Upload golangci-lint output
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          version: v2.11.4
-          args: --timeout=5m
-          only-new-issues: true
+          name: golangci-lint-output
+          path: |
+            golangci-lint.line-number.txt
+            golangci-lint.txt
+          retention-days: 1
 
   # ---------------------------------------------------------------------------
-  # clang-tidy - C static analysis via cpp-linter-action
+  # clang-tidy - runs once, uploads SARIF for the report job
   # ---------------------------------------------------------------------------
   clang-tidy:
     name: clang-tidy
@@ -48,63 +73,8 @@ jobs:
     steps:
       - name: Update apt cache
         run: sudo apt-get update
-      - name: Clean apt cache
-        run: sudo apt-get clean
       - uses: actions/checkout@v4
 
-      - uses: cpp-linter/cpp-linter-action@v2
-        id: linter
-        with:
-          style: ''
-          tidy-checks: '-*,bugprone-*,cert-*,clang-analyzer-*,portability-*'
-          files-changed-only: false
-          extra-args: '-I/usr/include/python3.12 -Iinclude -I.'
-          ignore: 'changelog'
-
-  # ---------------------------------------------------------------------------
-  # Report - inline annotations via Reviewdog + sticky summary PR comment
-  # ---------------------------------------------------------------------------
-  report:
-    name: PR Quality Report
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    permissions:
-      pull-requests: write
-      contents: read
-      checks: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: stable
-          cache: true
-
-      - name: Install golangci-lint
-        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.11.4
-
-      - name: Install Semgrep
-        run: pip install semgrep
-
-      - name: Install Reviewdog
-        uses: reviewdog/action-setup@v1
-        with:
-          reviewdog_version: latest
-
-      # Inline annotations in Checks tab and Files changed tab
-      - name: golangci-lint annotations
-        env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          golangci-lint run --timeout=5m --output.formats=line-number 2>&1 | \
-          reviewdog -f=golangci-lint \
-            -name="golangci-lint" \
-            -reporter=github-check \
-            -filter-mode=added \
-            -level=warning \
-            -fail-level=none || true
-
-      # clang-tidy - posts its own native PR thread comment with all findings
       - uses: cpp-linter/cpp-linter-action@v2
         id: linter
         env:
@@ -112,11 +82,25 @@ jobs:
         with:
           style: ''
           tidy-checks: '-*,bugprone-*,cert-*,clang-analyzer-*,portability-*'
-          files-changed-only: true
+          files-changed-only: false
           extra-args: '-I/usr/include/python3.12 -Iinclude -I.'
-          ignore: 'test|old_noxpy.c'
-          thread-comments: update
+          ignore: 'test|old_noxpy.c|changelog'
+          # Let this job post the inline file annotations + PR thread comment
+          # directly, so the report job doesn't need to re-run clang-tidy.
+          thread-comments: ${{ github.event_name == 'pull_request' && 'update' || false }}
           file-annotations: true
+
+  # ---------------------------------------------------------------------------
+  # Semgrep - runs once, uploads SARIF for the report job
+  # ---------------------------------------------------------------------------
+  semgrep:
+    name: semgrep
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Semgrep
+        run: pip install semgrep
 
       - name: Run Semgrep
         run: |
@@ -128,6 +112,62 @@ jobs:
             --sarif \
             --output semgrep.sarif || true
 
+      - name: Upload Semgrep SARIF
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-output
+          path: semgrep.sarif
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Report - consumes artifacts from the linter jobs, posts annotations +
+  # sticky PR summary comment. Does NOT re-run any linter.
+  # ---------------------------------------------------------------------------
+  report:
+    name: PR Quality Report
+    runs-on: ubuntu-latest
+    needs: [golangci-lint, clang-tidy, semgrep]
+    # Run even if upstream jobs "failed" (i.e. found issues) — we still want the report.
+    if: ${{ github.event_name == 'pull_request' && always() }}
+    permissions:
+      pull-requests: write
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download golangci-lint output
+        uses: actions/download-artifact@v4
+        with:
+          name: golangci-lint-output
+          path: artifacts/golangci-lint
+
+      - name: Download Semgrep SARIF
+        uses: actions/download-artifact@v4
+        with:
+          name: semgrep-output
+          path: artifacts/semgrep
+
+      - name: Install Reviewdog
+        uses: reviewdog/action-setup@v1
+        with:
+          reviewdog_version: latest
+
+      # Inline annotations from the already-computed golangci-lint output
+      - name: golangci-lint annotations
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          reviewdog -f=golangci-lint \
+            -name="golangci-lint" \
+            -reporter=github-check \
+            -filter-mode=added \
+            -level=warning \
+            -fail-level=none \
+            < artifacts/golangci-lint/golangci-lint.line-number.txt || true
+
+      # Inline annotations from the already-computed Semgrep SARIF
       - name: Semgrep annotations
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -138,16 +178,13 @@ jobs:
             -filter-mode=added \
             -level=warning \
             -fail-level=none \
-            < semgrep.sarif || true
+            < artifacts/semgrep/semgrep.sarif || true
 
-      # Capture golangci-lint output for summary comment
-      - name: Capture golangci-lint output
+      # Read golangci-lint output for summary comment
+      - name: Read golangci-lint output
         id: golangci
         run: |
-          OUTPUT=$(golangci-lint run --timeout=5m 2>&1 || true)
-          if [ -z "$OUTPUT" ]; then
-            OUTPUT="✅ No issues found."
-          fi
+          OUTPUT=$(cat artifacts/golangci-lint/golangci-lint.txt)
           {
             echo "result<<EOF"
             echo "$OUTPUT"
@@ -169,7 +206,7 @@ jobs:
           base_url = f"https://github.com/{repo}/blob/{sha}"
 
           try:
-            with open('semgrep.sarif') as f:
+            with open('artifacts/semgrep/semgrep.sarif') as f:
               data = json.load(f)
             findings = []
             for run in data.get('runs', []):
@@ -199,8 +236,8 @@ jobs:
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
-      # Sticky PR comment — updates on every push, never duplicates
-      # (clang-tidy posts its own separate comment via thread-comments: update)
+      # Sticky PR comment — updates on every push, never duplicates.
+      # clang-tidy posts its own thread comment from its own job.
       - name: Post summary comment
         uses: marocchino/sticky-pull-request-comment@v2
         with:
@@ -209,6 +246,7 @@ jobs:
             ## 🔍 Code Quality Report
 
             > 💡 Inline annotations are also visible in the **Checks** tab and **Files changed** tab.
+            > clang-tidy findings appear in a separate PR comment below.
 
             <details open>
             <summary><b>🔧 golangci-lint</b></summary>
