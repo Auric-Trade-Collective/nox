@@ -20,3 +20,4 @@ void CreateNoxApi(NoxEndpointCollection *coll) {
 
     LogWrite("Nox API", "Okay we can log from here!");
 }
+

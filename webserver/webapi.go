@@ -91,11 +91,11 @@ func TrySetCookie(w *C.HttpResponse, key *C.char, value *C.char, path *C.char, e
 	goHttpOnly := bool(httponly)
 
 	http.SetCookie(wrt, &http.Cookie{
-		Name: goKey,
-		Value: goValue,
-		Path: goPath,
-		Expires: time.Unix(goExpires, 0),
-		Secure: goSecure,
+		Name:     goKey,
+		Value:    goValue,
+		Path:     goPath,
+		Expires:  time.Unix(goExpires, 0),
+		Secure:   goSecure,
 		HttpOnly: goHttpOnly,
 	})
 }
@@ -134,7 +134,6 @@ func TrySetResponseHeader(w *C.HttpResponse, key *C.char, val *C.char, add C.int
 
 	goKey := C.GoString(key)
 	goVal := C.GoString(val)
-
 
 	if int(add) == 1 {
 		wrt.Header().Add(goKey, goVal)
@@ -193,7 +192,7 @@ func TrySetRequestHeader(req *C.HttpRequest, key *C.char, val *C.char, add C.int
 	} else {
 		r.Header.Set(goKey, goVal)
 	}
-	
+
 	return 1
 }
 
@@ -323,7 +322,7 @@ func WriteCopy(w *C.HttpResponse, dat *C.NoxData) {
 
 	toWrite := make([]byte, dat.length)
 	copy(toWrite, buff)
-	
+
 	conType := C.GoString(dat.contentType)
 	wrt.Header().Set("Content-Type", conType)
 
@@ -388,7 +387,7 @@ func GetEnv(secret *C.char, key *C.char) *C.char {
 	goTarget := C.GoString(key)
 
 	if try, ok := secrets[goNm][goTarget]; ok {
-		ret := C.CString(try);	
+		ret := C.CString(try)
 		return ret
 	}
 
@@ -413,7 +412,7 @@ func CreateApi(libpaths []string, authLib *string) (*NoxApi, error) {
 	nox := &NoxApi{
 		handle:    make([]*C.NoxEndpointCollection, 1),
 		Endpoints: make(map[string]map[string]unsafe.Pointer),
-		Auth: nil,
+		Auth:      nil,
 	}
 
 	for _, libpath := range libpaths {
@@ -457,8 +456,8 @@ func CreateApi(libpaths []string, authLib *string) (*NoxApi, error) {
 		}
 
 		if endp.name != nil && endp.secret != nil {
-			goNm := C.GoString(endp.name)	
-			goSec := C.GoString(endp.secret);
+			goNm := C.GoString(endp.name)
+			goSec := C.GoString(endp.secret)
 
 			logger.Debug("Secret registered: " + goSec)
 
@@ -523,6 +522,7 @@ func (api *NoxApi) ExecuteEndpoint(path string, resp http.ResponseWriter, req *h
 		//nolint:errcheck // reason: no way for this to error I dont think
 		resp.Write([]byte(pages.Pg404))
 		return
+
 	}
 
 	if api.Authenticate(cReq) {
