@@ -3,7 +3,9 @@
 
 void SomeCookie(HttpResponse *resp, HttpRequest *req) {
     LogDebug("Nox API", "Redirecting this cool dude!");
-    TemporaryRedirect(resp, req, "https://google.com/");
+    // TemporaryRedirect(resp, req, "https://google.com/");
+
+    ApiStatusPage(resp, 404, 1);
 }
 
 int NoxAuth(HttpRequest *req) {

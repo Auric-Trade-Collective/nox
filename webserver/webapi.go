@@ -21,18 +21,67 @@ import (
 
 //c exports
 
+//export ApiStatus
+func ApiStatus(resp *C.HttpResponse, code C.int, message *C.char, error C.int) {
+	gohandle := cgo.Handle(resp.gohandle)
+	wrt, ok := gohandle.Value().(http.ResponseWriter)
+	if !ok {
+		Handler.Errored = true
+		logger.Error("[ApiError] Could not write error to stream!")
+		return
+	}
+
+	if int(error) == 1 {
+		Handler.Errored = true
+	}
+
+	http.Error(wrt, C.GoString(message), int(code))
+}
+
+//export ApiStatusPage
+func ApiStatusPage(resp *C.HttpResponse, code C.int, error C.int) {
+	gohandle := cgo.Handle(resp.gohandle)
+	wrt, ok := gohandle.Value().(http.ResponseWriter)
+	if !ok {
+		Handler.Errored = true
+		logger.Error("[ApiErrorPage] Could not write error to stream!")
+		return
+	}
+
+	if int(error) == 1 {
+		Handler.Errored = true
+	}
+
+	if page, ok := pages.Pages[int(code)]; ok {
+		wrt.Header().Set("Content-Type", "text/html")
+		wrt.WriteHeader(int(code))
+		wrt.Write([]byte(page))
+	} else {
+		Handler.Errored = true
+		logger.Error("[ApiStatusPage] Error code not valid!")
+
+		wrt.Header().Set("Content-Type", "text/html")
+		wrt.WriteHeader(500)
+		wrt.Write([]byte(pages.Pages[500]))
+	}
+}
+
 //export TemporaryRedirect
 func TemporaryRedirect(resp *C.HttpResponse, req *C.HttpRequest, location *C.char) {
 	gohandle := cgo.Handle(resp.gohandle)
 	wrt, ok := gohandle.Value().(http.ResponseWriter)
 	if !ok {
-		logger.Warn("Could not write to stream!")
+		Handler.Errored = true
+		logger.Error("[TemporaryRedirect] Could not redirect!")
+		return
 	}
 
 	gohandle2 := cgo.Handle(req.gohandle)
 	r, ok := gohandle2.Value().(*http.Request)
 	if !ok {
-		logger.Warn("Could not get request body!")
+		Handler.Errored = true
+		logger.Error("[TemporaryRedirect] Could not redirect!")
+		return
 	}
 
 	loc := C.GoString(location)
@@ -44,13 +93,17 @@ func PermanentRedirect(resp *C.HttpResponse, req *C.HttpRequest, location *C.cha
 	gohandle := cgo.Handle(resp.gohandle)
 	wrt, ok := gohandle.Value().(http.ResponseWriter)
 	if !ok {
-		logger.Warn("Could not write to stream!")
+		Handler.Errored = true
+		logger.Error("[PermanentRedirect] Could not write to stream!")
+		return
 	}
 
 	gohandle2 := cgo.Handle(req.gohandle)
 	r, ok := gohandle2.Value().(*http.Request)
 	if !ok {
-		logger.Warn("Could not get request body!")
+		Handler.Errored = true
+		logger.Error("[PermanentRedirect] Could not get request body!")
+		return
 	}
 
 	loc := C.GoString(location)
@@ -62,7 +115,8 @@ func TryGetCookie(req *C.HttpRequest, key *C.char) *C.char {
 	gohandle := cgo.Handle(req.gohandle)
 	r, ok := gohandle.Value().(*http.Request)
 	if !ok {
-		logger.Warn("Could not get request body!")
+		Handler.Errored = true
+		logger.Error("[TryGetCookie] Could not get cookie!")
 	}
 
 	goKey := C.GoString(key)
@@ -80,7 +134,7 @@ func TrySetCookie(w *C.HttpResponse, key *C.char, value *C.char, path *C.char, e
 	gohandle := cgo.Handle(w.gohandle)
 	wrt, ok := gohandle.Value().(http.ResponseWriter)
 	if !ok {
-		logger.Warn("Could not write to stream!")
+		logger.Warn("[TrySetCookie] Could not write cookie to response!")
 	}
 
 	goKey := C.GoString(key)
@@ -91,11 +145,11 @@ func TrySetCookie(w *C.HttpResponse, key *C.char, value *C.char, path *C.char, e
 	goHttpOnly := bool(httponly)
 
 	http.SetCookie(wrt, &http.Cookie{
-		Name: goKey,
-		Value: goValue,
-		Path: goPath,
-		Expires: time.Unix(goExpires, 0),
-		Secure: goSecure,
+		Name:     goKey,
+		Value:    goValue,
+		Path:     goPath,
+		Expires:  time.Unix(goExpires, 0),
+		Secure:   goSecure,
 		HttpOnly: goHttpOnly,
 	})
 }
@@ -105,7 +159,8 @@ func TryGetResponseHeader(w *C.HttpResponse, key *C.char, num C.size_t, out **C.
 	gohandle := cgo.Handle(w.gohandle)
 	wrt, ok := gohandle.Value().(http.ResponseWriter)
 	if !ok {
-		logger.Warn("Could not write to stream!")
+		Handler.Errored = true
+		logger.Error("[TryGetResponseHeader] Could not write header to stream!")
 		return 0
 	}
 
@@ -128,13 +183,13 @@ func TrySetResponseHeader(w *C.HttpResponse, key *C.char, val *C.char, add C.int
 	gohandle := cgo.Handle(w.gohandle)
 	wrt, ok := gohandle.Value().(http.ResponseWriter)
 	if !ok {
-		logger.Warn("Could not write to stream!")
+		Handler.Errored = true
+		logger.Error("[TrySetResponseHeader] Could not write header to stream!")
 		return 0
 	}
 
 	goKey := C.GoString(key)
 	goVal := C.GoString(val)
-
 
 	if int(add) == 1 {
 		wrt.Header().Add(goKey, goVal)
@@ -150,7 +205,8 @@ func TryGetRequestHeader(req *C.HttpRequest, key *C.char, num C.size_t, out **C.
 	gohandle := cgo.Handle(req.gohandle)
 	r, ok := gohandle.Value().(*http.Request)
 	if !ok {
-		logger.Warn("Could not get request body!")
+		Handler.Errored = true
+		logger.Error("[TryGetRequestHeader] Could not get request body!")
 		return 0
 	}
 
@@ -181,7 +237,8 @@ func TrySetRequestHeader(req *C.HttpRequest, key *C.char, val *C.char, add C.int
 	gohandle := cgo.Handle(req.gohandle)
 	r, ok := gohandle.Value().(*http.Request)
 	if !ok {
-		logger.Warn("Could not get request body!")
+		Handler.Errored = true
+		logger.Error("[TrySetRequestHeader] Could not get request body!")
 		return 0
 	}
 
@@ -193,7 +250,7 @@ func TrySetRequestHeader(req *C.HttpRequest, key *C.char, val *C.char, add C.int
 	} else {
 		r.Header.Set(goKey, goVal)
 	}
-	
+
 	return 1
 }
 
@@ -202,7 +259,8 @@ func ReadBody(req *C.HttpRequest, buffer *C.uint8_t, numBytes C.size_t) C.size_t
 	gohandle := cgo.Handle(req.gohandle)
 	r, ok := gohandle.Value().(*http.Request)
 	if !ok {
-		logger.Warn("Could not get request body!")
+		Handler.Errored = true
+		logger.Error("[ReadBody] Could not get request body!")
 		return C.size_t(0)
 	}
 
@@ -219,7 +277,8 @@ func GetUri(req *C.HttpRequest, outLength *C.size_t) *C.char {
 	gohandle := cgo.Handle(req.gohandle)
 	r, ok := gohandle.Value().(*http.Request)
 	if !ok {
-		logger.Warn("Could not get request URL!")
+		Handler.Errored = true
+		logger.Error("[GetUri] Could not get request URL!")
 		return nil
 	}
 
@@ -233,7 +292,8 @@ func TryGetUriParam(req *C.HttpRequest, key *C.char, index C.size_t, out **C.cha
 	gohandle := cgo.Handle(req.gohandle)
 	r, ok := gohandle.Value().(*http.Request)
 	if !ok {
-		logger.Warn("Could not get request URL!")
+		Handler.Errored = true
+		logger.Error("[TryGetUriParam] Could not get request URL!")
 		return 0
 	}
 
@@ -254,7 +314,8 @@ func GetUriParamCount(req *C.HttpRequest, val *C.char) C.size_t {
 	gohandle := cgo.Handle(req.gohandle)
 	r, ok := gohandle.Value().(*http.Request)
 	if !ok {
-		logger.Warn("Could not get request URL!")
+		Handler.Errored = true
+		logger.Error("[GetUriParamCount] Could not get request URL!")
 		return C.size_t(0)
 	}
 
@@ -266,24 +327,13 @@ func GetUriParamCount(req *C.HttpRequest, val *C.char) C.size_t {
 	return C.size_t(0)
 }
 
-// //export GetHeader
-// func GetHeader(req *C.HttpRequest, header *C.char) *C.char {
-// 	gohandle := cgo.Handle(req.gohandle)
-// 	r, ok := gohandle.Value().(*http.Request)
-// 	if !ok {
-// 		logger.Warn("Could not get request URL!")
-// 		return nil
-// 	}
-//
-// 	return C.CString(r.Header.Get(C.GoString(header)))
-// }
-
 //export WriteFile
 func WriteFile(w *C.HttpResponse, dat *C.NoxData) {
 	gohandle := cgo.Handle(w.gohandle)
 	wrt, ok := gohandle.Value().(http.ResponseWriter)
 	if !ok {
-		logger.Warn("Could not write to stream!")
+		Handler.Errored = true
+		logger.Error("[WriteFile] Could not write file to stream!")
 		return
 	}
 
@@ -315,7 +365,8 @@ func WriteCopy(w *C.HttpResponse, dat *C.NoxData) {
 	gohandle := cgo.Handle(w.gohandle)
 	wrt, ok := gohandle.Value().(http.ResponseWriter)
 	if !ok {
-		logger.Warn("Could not write to stream!")
+		Handler.Errored = true
+		logger.Error("[WriteCopy] Could not write data to stream!")
 		return
 	}
 
@@ -323,7 +374,7 @@ func WriteCopy(w *C.HttpResponse, dat *C.NoxData) {
 
 	toWrite := make([]byte, dat.length)
 	copy(toWrite, buff)
-	
+
 	conType := C.GoString(dat.contentType)
 	wrt.Header().Set("Content-Type", conType)
 
@@ -335,7 +386,8 @@ func WriteMove(w *C.HttpResponse, dat *C.NoxData) {
 	gohandle := cgo.Handle(w.gohandle)
 	wrt, ok := gohandle.Value().(http.ResponseWriter)
 	if !ok {
-		logger.Warn("Could not write to stream!")
+		Handler.Errored = true
+		logger.Error("[WriteMove] Could not write data to stream!")
 		return
 	}
 
@@ -353,7 +405,8 @@ func WriteText(w *C.HttpResponse, dat *C.char, length C.int) {
 	gohandle := cgo.Handle(w.gohandle)
 	wrt, ok := gohandle.Value().(http.ResponseWriter)
 	if !ok {
-		logger.Warn("Could not write to stream!")
+		Handler.Errored = true
+		logger.Error("[WriteText] Could not write text to stream!")
 		return
 	}
 
@@ -388,10 +441,11 @@ func GetEnv(secret *C.char, key *C.char) *C.char {
 	goTarget := C.GoString(key)
 
 	if try, ok := secrets[goNm][goTarget]; ok {
-		ret := C.CString(try);	
+		ret := C.CString(try)
 		return ret
 	}
 
+	Handler.Errored = true
 	logger.Error("Could not find requested environment variable: " + goTarget)
 	logger.Debug("Error DBG: ")
 	logger.Debug("    Secret: " + goNm)
@@ -413,7 +467,7 @@ func CreateApi(libpaths []string, authLib *string) (*NoxApi, error) {
 	nox := &NoxApi{
 		handle:    make([]*C.NoxEndpointCollection, 1),
 		Endpoints: make(map[string]map[string]unsafe.Pointer),
-		Auth: nil,
+		Auth:      nil,
 	}
 
 	for _, libpath := range libpaths {
@@ -424,7 +478,7 @@ func CreateApi(libpaths []string, authLib *string) (*NoxApi, error) {
 		nox.handle = append(nox.handle, endp)
 
 		if endp == nil {
-			logger.Panic("Lib does not exist! " + libpath)
+			logger.Panic("Could not load library: " + libpath)
 		}
 
 		endps := getNoxEndpointSlice(endp)
@@ -449,6 +503,8 @@ func CreateApi(libpaths []string, authLib *string) (*NoxApi, error) {
 				end = nox.Endpoints[path]
 			}
 			end[method] = unsafe.Pointer(ep.callback)
+
+			logger.Debug("Registered endpoint [" + method + "]: " + path)
 		}
 
 		if authLib != nil && *authLib == libpath && endp.auth != nil {
@@ -457,8 +513,8 @@ func CreateApi(libpaths []string, authLib *string) (*NoxApi, error) {
 		}
 
 		if endp.name != nil && endp.secret != nil {
-			goNm := C.GoString(endp.name)	
-			goSec := C.GoString(endp.secret);
+			goNm := C.GoString(endp.name)
+			goSec := C.GoString(endp.secret)
 
 			logger.Debug("Secret registered: " + goSec)
 
@@ -518,19 +574,27 @@ func (api *NoxApi) ExecuteEndpoint(path string, resp http.ResponseWriter, req *h
 	}
 
 	if _, ok := api.Endpoints[path][req.Method]; !ok {
+		Handler.Errored = true
 		logger.Error("Could not find requested endpoint [" + req.Method + "] " + path)
 		resp.WriteHeader(http.StatusNotFound)
 		//nolint:errcheck // reason: no way for this to error I dont think
-		resp.Write([]byte(pages.Pg404))
+		resp.Write([]byte(pages.Pages[404]))
 		return
 	}
 
 	if api.Authenticate(cReq) {
 		C.InvokeApiCallback((*[0]byte)(api.Endpoints[path][req.Method]), cResp, cReq)
+
+		if Handler.Errored {
+			logger.Error("[" + req.Method + "] " + req.URL.Path + " failed! Called by " + req.RemoteAddr)
+			return
+		}
+
 		logger.Write("[" + req.Method + "] " + req.URL.Path + " called by " + req.RemoteAddr)
 	} else {
 		resp.WriteHeader(http.StatusUnauthorized)
-		resp.Write([]byte(pages.Pg401))
+		//nolint:errcheck // reason: no way for this to error I dont think
+		resp.Write([]byte(pages.Pages[401]))
 	}
 }
 

@@ -11,7 +11,7 @@ import (
 	toml "github.com/pelletier/go-toml/v2"
 )
 
-var Version = "0.0.2"
+var Version = "0.0.4"
 
 var CLI struct {
 	Version kong.VersionFlag `help:"Print version and exit"`
@@ -21,9 +21,9 @@ var CLI struct {
 		Config string `help:"Path to config file" default:"nox.toml"`
 	} `cmd:"" help:"Spinup a nox server"`
 
-	Install struct {} `help:"Install nox into your system and path" cmd:""`
-	Init struct {} `help:"Create a nox.toml file" cmd:""`
-	Debug bool `help:"Use debug mode" default:"false"`
+	Install struct{} `help:"Install nox into your system and path" cmd:""`
+	Init    struct{} `help:"Create a nox.toml file" cmd:""`
+	Debug   bool     `help:"Use debug mode" default:"false"`
 }
 
 func main() {
@@ -42,8 +42,10 @@ func main() {
 	}
 
 	switch ctx.Command() {
-	case "init": initNoxToml()
-	case "install": installNox()
+	case "init":
+		initNoxToml()
+	case "install":
+		installNox()
 	case "spin":
 		dir, err := filepath.Abs("./")
 		if err != nil {
