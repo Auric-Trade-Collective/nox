@@ -20,21 +20,15 @@ var SupportedHttpMethods = map[string]bool{
 var Handler *NoxHandler = nil
 
 type NoxHandler struct {
-	Root string
-	Api  *NoxApi
-	//eventually map the endpoints to some ABI functions
-	DirView interface{}
+	Root            string
+	Api             *NoxApi
+	CurrentEndpoint string
+	Errored         bool
 }
 
 func (h *NoxHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if h.Root == "" {
-		if h.Api != nil {
-			h.handleLogicReq(w, req)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(pages.Pg404))
-		}
-
+		h.handleEmptyRoot(w, req)
 		return
 	}
 
@@ -61,6 +55,15 @@ func (h *NoxHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	http.ServeFile(w, req, sanitized)
 }
 
+func (h *NoxHandler) handleEmptyRoot(w http.ResponseWriter, req *http.Request) {
+	if h.Api != nil {
+		h.handleLogicReq(w, req)
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(pages.Pg404))
+	}
+}
+
 func (h *NoxHandler) handleLogicReq(w http.ResponseWriter, req *http.Request) {
 	if h.Api == nil {
 		return
@@ -76,7 +79,7 @@ func (h *NoxHandler) handleLogicReq(w http.ResponseWriter, req *http.Request) {
 		h.Api.ExecuteEndpoint(req.URL.Path, w, req)
 	} else {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(pages.Pg404))
+		w.Write([]byte(pages.Pages[404]))
 	}
 }
 
@@ -88,12 +91,7 @@ func (h *NoxHandler) handleDirReq(w http.ResponseWriter, req *http.Request, path
 		return
 	} else if !os.IsNotExist(indexErr) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(pages.Pg404))
-		return
-	}
-
-	if h.DirView != nil {
-		//generate dir view
+		w.Write([]byte(pages.Pages[404]))
 		return
 	}
 

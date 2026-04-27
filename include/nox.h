@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include <dlfcn.h> 
+#include <dlfcn.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "dlls.h"
@@ -18,7 +18,7 @@ typedef struct {
     char *endpoint;
     char *method;
     char *remoteAddr;
-    
+
     // uintptr_t headers;
     // uintptr_t body;
     // uintptr_t url;
@@ -76,7 +76,7 @@ static inline char * SanitizePath(char *buff) {
 static inline void CreateNoxEndpoint(NoxEndpointCollection *coll, char *endpoint, apiCallback callback, int method) {
     char *sEndp = SanitizePath(strdup(endpoint));
     NoxEndpoint endp = { .endpoint = sEndp, .callback = callback, .method = method };
-    
+
     NoxEndpoint *ep = (NoxEndpoint *)malloc(sizeof(NoxEndpoint) * (coll->endpointCount + 1));
 
     if(coll->endpoints != NULL) {
@@ -90,6 +90,7 @@ static inline void CreateNoxEndpoint(NoxEndpointCollection *coll, char *endpoint
     coll->endpointCount++;
 }
 
+void LogDebug(char *name_space, char *msg);
 static inline NoxEndpointCollection *LoadApi(char *location) {
     DllManager *dll = LoadDll(location);
     if(dll == NULL) {
@@ -105,8 +106,13 @@ static inline NoxEndpointCollection *LoadApi(char *location) {
     coll->secret = NULL;
 
     createNox create = (createNox)dlsym(dll->lib_handle, "CreateNoxApi");
+    char *error = dlerror();
 
     if(create == NULL) {
+        if(error != NULL) {
+            LogDebug("Nox DLL Loader", error);
+            free(error);
+        }
         printf("Failed to create nox\n");
         return NULL;
     }
@@ -160,7 +166,7 @@ static inline char *RegisterName(NoxEndpointCollection *coll, char *name) {
     generate_secure_string(secure, 16);
 
     char *duped = strdup(name);
-    
+
     coll->name = duped;
     coll->secret = secure;
 
@@ -293,6 +299,9 @@ char *GetEnv(char *secret, char *key);
 
 void TemporaryRedirect(HttpResponse *resp, HttpRequest *req, char *loc);
 void PermanentRedirect(HttpResponse *resp, HttpRequest *req, char *loc);
+
+void ApiStatus(HttpResponse *resp, int code, char *message, int error);
+void ApiStatusPage(HttpResponse *resp, int code, int error);
 
 //PLUGINS
 

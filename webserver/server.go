@@ -3,6 +3,8 @@ package webserver
 import (
 	"YendisFish/nox/logger"
 	"YendisFish/nox/pages"
+	"strconv"
+
 	// "YendisFish/nox/webapi"
 	"net/http"
 	"os"
@@ -24,11 +26,11 @@ func NewWebserver(config *Config) *Webserver {
 		}
 	}
 
-	hand := &NoxHandler{ Root: config.Nox.Root, Api: api, DirView: nil }
+	hand := &NoxHandler{Root: config.Nox.Root, Api: api}
 	Handler = hand
 	server := &Webserver{
 		server: &http.Server{
-			Addr: config.Nox.Addr,
+			Addr:    config.Nox.Addr,
 			Handler: hand,
 		},
 		config: config,
@@ -46,9 +48,9 @@ func (s *Webserver) Serve() {
 			logger.Panic(err.Error())
 		}
 	} else {
-		err := s.server.ListenAndServeTLS(s.config.Nox.Tls.CertFile, 
-		                                  s.config.Nox.Tls.KeyFile)
-		
+		err := s.server.ListenAndServeTLS(s.config.Nox.Tls.CertFile,
+			s.config.Nox.Tls.KeyFile)
+
 		if err != nil {
 			logger.Panic(err.Error())
 		}
@@ -56,26 +58,21 @@ func (s *Webserver) Serve() {
 }
 
 func setupErrorPages(root string) {
-	supported := map[string]*string {
-		"401": &pages.Pg401,
-		"404": &pages.Pg404,
-		"500": &pages.Pg500,
-	}
-
-	fpath := filepath.Join(root, "/error/")
-	for k, v := range supported {
-		final := filepath.Join(fpath, k + ".html")
+	fpath := filepath.Join(root, "/status/")
+	for k, _ := range pages.Pages {
+		num := strconv.Itoa(k)
+		final := filepath.Join(fpath, num+".html")
 		_, err := os.Stat(final)
 		if err != nil {
-			logger.Warn("Could not get information for custom error: " + final)
+			logger.Debug("Could not get information for custom error: " + final)
 			continue
 		}
-		
+
 		buff, err := os.ReadFile(final)
 		if err != nil {
 			logger.Panic("Could not read file " + final + " when setting custom errors")
 		}
 
-		*v = string(buff)
+		pages.Pages[k] = string(buff)
 	}
 }
