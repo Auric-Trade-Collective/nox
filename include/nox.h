@@ -146,19 +146,33 @@ static inline void CloseApi(NoxEndpointCollection *coll) {
 
 static inline void generate_secure_string(char *buffer, size_t length) {
     const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    uint8_t random_data[length];
+    uint8_t *random_data = (uint8_t *)malloc(length);
+    if (!random_data) return;
 
-    // Fill the byte array with cryptographically secure bytes
-    if (getrandom(random_data, length, 0) == -1) {
-        perror("getrandom failed");
+    // Open /dev/urandom, which exists on Linux, macOS, and BSD systems natively
+    FILE *fp = fopen("/dev/urandom", "r");
+    if (!fp) {
+        perror("Failed to open /dev/urandom");
+        free(random_data);
         return;
     }
 
-    // Map random bytes to your desired characters
+    size_t bytes_read = fread(random_data, 1, length, fp);
+    fclose(fp);
+
+    if (bytes_read != length) {
+        perror("Failed to read sufficient random bytes");
+        free(random_data);
+        return;
+    }
+
+    // Map random bytes to your desired characters using your for loop
     for (size_t i = 0; i < length; i++) {
         buffer[i] = charset[random_data[i] % (sizeof(charset) - 1)];
     }
     buffer[length] = '\0';
+
+    free(random_data);
 }
 
 static inline char *RegisterName(NoxEndpointCollection *coll, char *name) {
